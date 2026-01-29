@@ -46,6 +46,9 @@ output/*.jpg
 output/*.jpeg
 !output/.gitkeep
 
+# Content
+content/
+
 # Temporary
 temp_assets/
 *.tmp
