@@ -6,6 +6,7 @@ Transform plain text or markdown content into professional presentations with AI
 
 ## Features
 
+- **Text Content Modes**: Choose between minimal (titles only) or rich (full content) text modes
 - **Smart Content Parsing**: Gemini Flash analyzes your content and structures it into logical slides
 - **AI Image Generation**: Gemini Imagen generates professional images for each slide with integrated titles
 - **Intelligent Text Layouts**: AI selects optimal layouts per slide (image-only, split, panel, overlay)
@@ -57,15 +58,32 @@ python -m src.deck_factory
 ```
 
 Follow the interactive prompts:
-1. Enter path to your content file (e.g., `content/my_presentation.md`)
-2. Optionally add brand reference images
-3. Answer clarification questions from the AI
-4. Wait for images to generate
-5. Get your PowerPoint file in the `src/output/` directory!
+1. Select text content mode (`minimal` for titles only, `rich` for full content)
+2. Enter path to your content file (e.g., `content/my_presentation.md`)
+3. Optionally add brand reference images
+4. Answer clarification questions from the AI
+5. Wait for images to generate
+6. Get your PowerPoint file in the `src/output/` directory!
+
+## Text Content Modes
+
+Choose between two generation modes at startup:
+
+### Minimal Mode (Default)
+- **Titles only**: Clean visual storytelling with titles integrated into images
+- **All slides use image-only layout**: No bullets, statistics, or text content
+- **Faster generation**: Skips text content analysis
+- **Best for**: Executive summaries, pitch decks, visual presentations
+
+### Rich Mode
+- **Full content**: Bullets, statistics, paragraphs, and callouts baked into images
+- **AI layout selection**: Intelligent choice of layout per slide based on content
+- **Information-dense**: More text content for detailed presentations
+- **Best for**: Educational content, detailed proposals, data-driven presentations
 
 ## Slide Layouts
 
-The AI automatically selects the best layout for each slide based on content:
+In rich mode, the AI automatically selects the best layout for each slide based on content:
 
 - **image-only**: Pure visual storytelling with title integrated into image (default)
 - **split-left**: Image on left, text content on right (balanced visual + text)
@@ -78,6 +96,8 @@ Text content can include:
 - **Statistics**: Key metrics with labels and values
 - **Paragraphs**: Short explanatory text
 - **Callouts**: Highlighted information boxes
+
+In minimal mode, all slides use **image-only** layout with no text content.
 
 ## Brand Assets
 
@@ -240,6 +260,13 @@ Deckhead uses a modular architecture with AI-driven layout selection:
 All components use Pydantic models for type safety and validation.
 
 ## Recent Updates
+
+### v0.3 - Text Content Mode Switcher (Jan 2026)
+- ✨ Added text content mode selector (minimal vs rich)
+- ✨ Minimal mode: Titles only, clean visual storytelling (default)
+- ✨ Rich mode: Full text content with intelligent layouts
+- ✨ Mode-aware AI prompt generation
+- 📚 Comprehensive documentation updates
 
 ### v0.2 - Text Content & Infographics (Jan 2026)
 - ✨ Added 5 intelligent slide layouts (image-only, split, panel, overlay)

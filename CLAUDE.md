@@ -47,11 +47,11 @@ mypy src/
 
 ### Core Flow
 1. **ConfigLoader** (`core/config.py`) - Loads `.env` configuration, validates API key
-2. **InteractiveCLI** (`cli/interactive.py`) - Rich terminal interface, prompts user for content file and brand assets
-3. **ContentParser** (`ai/content_parser.py`) - Uses Gemini Flash to parse content into structured `DeckStructure` with intelligent layout decisions
+2. **InteractiveCLI** (`cli/interactive.py`) - Rich terminal interface, prompts user for text content mode, content file, and brand assets
+3. **ContentParser** (`ai/content_parser.py`) - Uses Gemini Flash to parse content into structured `DeckStructure` with mode-aware layout decisions
 4. **Clarifier** (`ai/clarifier.py`) - Generates and validates clarification questions, refines structure based on responses
 5. **ImageFactory** (`ai/image_factory.py`) - Async parallel image generation via Gemini Imagen with brand consistency
-6. **DeckAssembler** (`deck/assembler.py`) - Creates PowerPoint using python-pptx with 5 layout types
+6. **DeckAssembler** (`deck/assembler.py`) - Creates PowerPoint using python-pptx with full-bleed image slides
 
 ### Key Design Patterns
 
@@ -159,6 +159,54 @@ temp_assets/     - Temporary files - created automatically
 
 ## Common Workflows
 
+### Using Text Content Modes
+
+**Deckhead supports two text content generation modes:**
+
+#### Minimal Mode (Default)
+- **Purpose**: Clean visual storytelling with titles only
+- **Behavior**:
+  - ALL slides use `image-only` layout
+  - NO text_content generated (set to null)
+  - Titles visually integrated into images
+  - No bullets, statistics, paragraphs, or callouts
+  - Faster generation (skips text content analysis)
+  - `infographic_style` disabled
+- **Best for**: Presentations that rely on strong visuals, executive summaries, pitch decks
+- **Example**: Title slide: "Market Expansion" generates a compelling visual with the title integrated as part of the image design
+
+#### Rich Mode
+- **Purpose**: Information-dense presentations with structured text content
+- **Behavior**:
+  - AI selects optimal layout per slide (image-only, split-left, split-right, panel, overlay)
+  - Generates structured text_content when substantial content exists
+  - Text content baked into generated images (not PowerPoint text boxes)
+  - Supports bullets (3-7 items), statistics, paragraphs, and callouts
+  - Uses `infographic_style: true` for data-heavy slides
+- **Best for**: Educational content, detailed proposals, data-driven presentations
+- **Example**: Slide with 4 bullet points and 3 statistics will use split-left layout with text rendered in the generated image
+
+#### How to Select Mode
+The mode selector appears as an interactive prompt after the welcome screen:
+```
+Text Content Mode
+
+Choose text content mode:
+  minimal - Titles only, clean visual storytelling (default)
+  rich - Full text content (bullets, statistics, callouts)
+
+Select mode [minimal/rich] (minimal):
+```
+
+Users select mode at the start of each generation. The mode applies to ALL slides in the presentation.
+
+#### Implementation Details
+- Mode passed to `ContentParser` constructor: `ContentParser(gemini_client, mode=text_mode)`
+- ContentParser builds mode-specific AI prompts in `_build_parsing_prompt()` and `_build_refinement_prompt()`
+- Minimal mode forces `layout_type: "image-only"` and `text_content: null` for all slides
+- Rich mode uses intelligent layout selection based on content analysis
+- ImageFactory automatically handles `None` text_content (skips text instructions and typography specs)
+
 ### Adding New Layout Type
 1. Add layout name to `SlideContent.layout_type` validator in `core/models.py`
 2. Update `_build_parsing_prompt()` in `ai/content_parser.py` to include layout in instructions
@@ -172,8 +220,9 @@ temp_assets/     - Temporary files - created automatically
 
 ### Changing Text Content Structure
 1. Update `TextContent` model in `core/models.py`
-2. Update parsing prompt JSON schema in `ai/content_parser.py`
-3. Update `_populate_text_content()` rendering in `deck/assembler.py`
+2. Update parsing prompt JSON schema in `ai/content_parser.py` (both minimal and rich mode schemas)
+3. Update `ImageFactory._convert_text_content_to_prompt()` to handle new text content types
+Note: Text content changes only apply in rich mode. Minimal mode always has `text_content: null`.
 
 ## Gotchas
 
@@ -181,18 +230,20 @@ temp_assets/     - Temporary files - created automatically
 
 2. **Title Integration**: Titles are NOT overlaid as text boxes. They must be integrated into the image prompt itself. The AI includes title text in the image generation prompt.
 
-3. **Layout vs Image-Only**: The AI defaults to `image-only` when text content is minimal. Don't force layouts with substantial text requirements if content doesn't support it.
+3. **Mode Selection is Per-Presentation**: The text content mode (minimal/rich) applies to ALL slides in a presentation. You cannot mix modes within a single deck. Choose the mode that best fits your overall presentation style.
 
-4. **Async Context**: Image generation must run in async context. Use `asyncio.run()` for CLI entry point (`__main__.py:cli_main()`).
+4. **Layout vs Image-Only**: In rich mode, the AI defaults to `image-only` when text content is minimal. Don't force layouts with substantial text requirements if content doesn't support it. In minimal mode, ALL slides are always image-only.
 
-5. **Python Path**: Tests may need `PYTHONPATH=src` when running individually if imports fail.
+5. **Async Context**: Image generation must run in async context. Use `asyncio.run()` for CLI entry point (`__main__.py:cli_main()`).
 
-6. **Image Format**: Generated images are always PNG format (hardcoded in `GeneratedImage.format`).
+6. **Python Path**: Tests may need `PYTHONPATH=src` when running individually if imports fail.
 
-7. **Slide Numbering**: 1-indexed (not 0-indexed). `slide_number` starts at 1 in all models.
+7. **Image Format**: Generated images are always PNG format (hardcoded in `GeneratedImage.format`).
 
-8. **Reference Images**: Must be `.jpg`, `.jpeg`, `.png`, or `.webp`. Validated in `BrandAssets.validate_image_paths()`.
+8. **Slide Numbering**: 1-indexed (not 0-indexed). `slide_number` starts at 1 in all models.
 
-9. **JSON Response Parsing**: AI responses must be valid JSON. Use `response_mime_type="application/json"` in `generate_text()` calls to enforce structured output.
+9. **Reference Images**: Must be `.jpg`, `.jpeg`, `.png`, or `.webp`. Validated in `BrandAssets.validate_image_paths()`.
 
-10. **Pydantic Validation**: All models use Pydantic v2. Field validators are `@field_validator` (not `@validator` from v1).
+10. **JSON Response Parsing**: AI responses must be valid JSON. Use `response_mime_type="application/json"` in `generate_text()` calls to enforce structured output.
+
+11. **Pydantic Validation**: All models use Pydantic v2. Field validators are `@field_validator` (not `@validator` from v1).

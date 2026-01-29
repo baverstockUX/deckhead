@@ -21,14 +21,16 @@ class ContentParser:
     slide structure with image prompts.
     """
 
-    def __init__(self, gemini_client: GeminiClient):
+    def __init__(self, gemini_client: GeminiClient, mode: str = "minimal"):
         """
         Initialize content parser.
 
         Args:
             gemini_client: Configured Gemini API client
+            mode: Text content mode ('minimal' or 'rich')
         """
         self.client = gemini_client
+        self.mode = mode
 
     async def parse_content(self, content: str) -> Tuple[DeckStructure, List[ClarificationQuestion]]:
         """
@@ -188,13 +190,44 @@ class ContentParser:
         Returns:
             Formatted prompt string
         """
-        return f"""You are an expert presentation designer. Analyze the following content and structure it into a PowerPoint presentation.
+        # Mode-specific instructions
+        if self.mode == "minimal":
+            mode_instructions = """
+## MINIMAL TEXT MODE (ACTIVE)
 
-CONTENT:
-{content}
+CRITICAL: Use MINIMAL TEXT mode:
+- ALL slides MUST use "image-only" layout
+- DO NOT generate text_content (set to null for all slides)
+- Titles should be visually integrated into images
+- Focus on pure visual storytelling
+- Skip detailed content structuring
+"""
+            layout_instructions = """
+2. Layout: ALL slides must use "image-only" layout
+"""
+            text_content_instructions = ""
+            json_schema_slides = """      {{
+        "slide_number": 1,
+        "title": "string",
+        "content_summary": "string (brief description)",
+        "layout_type": "image-only",
+        "text_content": null,
+        "image_prompt": "string (detailed image generation prompt with title integrated, minimum 20 words)",
+        "infographic_style": false,
+        "overlay_text": null,
+        "speaker_notes": "string (what presenter should say)"
+      }}"""
+        else:  # rich mode
+            mode_instructions = """
+## RICH TEXT MODE (ACTIVE)
 
-INSTRUCTIONS:
-1. Break the content into logical slides (minimum 1, maximum 20)
+Use RICH TEXT mode:
+- Analyze content and select optimal layout type per slide
+- Generate structured text_content when substantial content exists (3+ bullets, statistics, or meaningful paragraphs)
+- Text content will be baked into generated images
+- Default to "image-only" when content is minimal
+"""
+            layout_instructions = """
 2. For each slide, decide the OPTIMAL LAYOUT based on content:
    - "image-only": Pure visual storytelling, no substantial text needed (default)
    - "split-left": Image left, text content right (for balanced visual + text)
@@ -202,39 +235,23 @@ INSTRUCTIONS:
    - "panel": Full-width image top, text panel below
    - "overlay": Minimal text overlaid on image (use sparingly)
 
-3. For each slide:
-   - Create a concise title
+   LAYOUT SELECTION GUIDANCE:
    - Decide if substantial TEXT CONTENT exists (3+ bullets, statistics, or meaningful paragraphs)
    - If YES: Choose appropriate layout (split-left/split-right/panel) and structure the content
    - If NO: Use "image-only" layout
-   - Generate detailed image prompt with title integrated (16:9 aspect ratio, professional quality)
-   - For data-heavy slides with statistics/numbers, set infographic_style: true to generate chart-like visuals
-   - Write speaker notes
-
+   - split-left/split-right: Best for balanced visual + text (bullets, lists)
+   - panel: Best for image-first with supporting text below
+   - overlay: Only for minimal text (1-2 short lines)
+   - image-only: Default when visual tells the complete story
+"""
+            text_content_instructions = """
 4. TEXT CONTENT STRUCTURE (only if substantial content exists):
    - bullets: Array of concise bullet points (3-7 items, max 60 chars each)
    - statistics: Array of {{"label": "Metric", "value": "123%"}} for key numbers
    - paragraphs: Array of short paragraphs (1-3 sentences, max 200 chars)
    - callouts: Array of {{"title": "Title", "text": "content"}} for highlighted information
-
-5. LAYOUT SELECTION GUIDANCE:
-   - split-left/split-right: Best for balanced visual + text (bullets, lists)
-   - panel: Best for image-first with supporting text below
-   - overlay: Only for minimal text (1-2 short lines)
-   - image-only: Default when visual tells the complete story
-
-6. Generate clarification questions for:
-   - Ambiguous structure (should topics be combined/split?)
-   - Visual style preferences (if not clear from content)
-   - Missing information (deck title, specific details)
-   - Content organization improvements
-
-Return a JSON response with this EXACT structure:
-{{
-  "deck_structure": {{
-    "deck_title": "string",
-    "slides": [
-      {{
+"""
+            json_schema_slides = """      {{
         "slide_number": 1,
         "title": "string",
         "content_summary": "string (brief description)",
@@ -249,7 +266,34 @@ Return a JSON response with this EXACT structure:
         "infographic_style": true|false,
         "overlay_text": null,
         "speaker_notes": "string (what presenter should say)"
-      }}
+      }}"""
+
+        return f"""You are an expert presentation designer. Analyze the following content and structure it into a PowerPoint presentation.
+
+CONTENT:
+{content}
+{mode_instructions}
+INSTRUCTIONS:
+1. Break the content into logical slides (minimum 1, maximum 20)
+{layout_instructions}
+3. For each slide:
+   - Create a concise title
+   - Generate detailed image prompt with title integrated (16:9 aspect ratio, professional quality)
+   - For data-heavy slides with statistics/numbers, set infographic_style: true to generate chart-like visuals
+   - Write speaker notes
+{text_content_instructions}
+5. Generate clarification questions for:
+   - Ambiguous structure (should topics be combined/split?)
+   - Visual style preferences (if not clear from content)
+   - Missing information (deck title, specific details)
+   - Content organization improvements
+
+Return a JSON response with this EXACT structure:
+{{
+  "deck_structure": {{
+    "deck_title": "string",
+    "slides": [
+{json_schema_slides}
     ]
   }},
   "clarification_questions": [
@@ -265,13 +309,13 @@ Return a JSON response with this EXACT structure:
 
 IMPORTANT:
 - Image prompts must include the slide title visually integrated into the image
-- Text content will be BAKED INTO THE GENERATED IMAGE (not PowerPoint text)
-- Layout types control how text is positioned within the generated image
-- Only include text_content if substantial content exists (not just rephrasing the title)
-- Default to "image-only" layout when in doubt
-- For statistics/data slides, use infographic_style: true to generate chart-like images
-- Bullet points must be concise and scannable (max 60 chars each)
-- Text content should complement, not duplicate, the image
+{"- ALL slides must use image-only layout (no text_content)" if self.mode == "minimal" else "- Text content will be BAKED INTO THE GENERATED IMAGE (not PowerPoint text)"}
+{"- Focus on pure visual storytelling with titles integrated" if self.mode == "minimal" else "- Layout types control how text is positioned within the generated image"}
+{"" if self.mode == "minimal" else "- Only include text_content if substantial content exists (not just rephrasing the title)"}
+{"" if self.mode == "minimal" else "- Default to 'image-only' layout when in doubt"}
+{"- infographic_style should be false for all slides" if self.mode == "minimal" else "- For statistics/data slides, use infographic_style: true to generate chart-like images"}
+{"" if self.mode == "minimal" else "- Bullet points must be concise and scannable (max 60 chars each)"}
+{"" if self.mode == "minimal" else "- Text content should complement, not duplicate, the image"}
 - Set overlay_text to null (deprecated field)
 - Maintain professional presentation standards (not cluttered)
 - Only ask necessary clarification questions (2-5 questions)
@@ -301,32 +345,42 @@ IMPORTANT:
             for c in clarifications
         ])
 
-        return f"""You are refining a presentation structure based on user feedback.
-
-CURRENT STRUCTURE:
-{json.dumps(structure_dict, indent=2)}
-
-USER CLARIFICATIONS:
-{clarifications_text}
-
-INSTRUCTIONS:
-1. Apply the user's feedback to refine the deck structure
-2. Maintain the same JSON structure format
-3. Ensure image prompts include slide titles visually integrated
-4. Ensure layout decisions are appropriate for content (image-only, split-left, split-right, panel, overlay)
-5. Maintain or adjust text_content structure based on feedback
-6. Improve image prompts based on style feedback
-7. Adjust slide organization based on structure feedback
-8. Fill in missing information from content feedback
-9. Ensure brand consistency if mentioned
-10. Use infographic_style: true for data-heavy slides
-
-Return a JSON response with this EXACT structure:
-{{
-  "refined_structure": {{
-    "deck_title": "string",
-    "slides": [
-      {{
+        # Mode-specific refinement instructions
+        if self.mode == "minimal":
+            mode_refinement_instructions = """
+## MINIMAL TEXT MODE (ACTIVE)
+- ALL slides MUST remain "image-only" layout
+- DO NOT add text_content (keep as null)
+- Focus refinements on image prompts and visual storytelling
+- infographic_style should remain false
+"""
+            refinement_json_schema_slides = """      {{
+        "slide_number": 1,
+        "title": "string",
+        "content_summary": "string",
+        "layout_type": "image-only",
+        "text_content": null,
+        "image_prompt": "string (refined based on feedback, with title integrated)",
+        "infographic_style": false,
+        "overlay_text": null,
+        "speaker_notes": "string"
+      }}"""
+            refinement_important = """- Incorporate ALL user feedback
+- Maintain slide numbering sequence
+- Ensure slide titles are incorporated into image prompts
+- ALL slides must use image-only layout
+- Keep text_content as null for all slides
+- Focus on pure visual storytelling
+- Keep 16:9 aspect ratio in mind"""
+        else:  # rich mode
+            mode_refinement_instructions = """
+## RICH TEXT MODE (ACTIVE)
+- Apply feedback to layout decisions and text_content structure
+- Adjust layout types based on user preferences
+- Refine text_content structure as needed
+- Use infographic_style appropriately for data slides
+"""
+            refinement_json_schema_slides = """      {{
         "slide_number": 1,
         "title": "string",
         "content_summary": "string",
@@ -341,13 +395,8 @@ Return a JSON response with this EXACT structure:
         "infographic_style": true|false,
         "overlay_text": null,
         "speaker_notes": "string"
-      }}
-    ]
-  }}
-}}
-
-IMPORTANT:
-- Incorporate ALL user feedback
+      }}"""
+            refinement_important = """- Incorporate ALL user feedback
 - Maintain slide numbering sequence
 - Ensure slide titles are incorporated into image prompts
 - Text content will be RENDERED IN THE GENERATED IMAGE, not as PowerPoint text
@@ -356,3 +405,33 @@ IMPORTANT:
 - Use infographic_style: true for data-heavy slides
 - Enhance image prompts with style preferences
 - Keep 16:9 aspect ratio in mind"""
+
+        return f"""You are refining a presentation structure based on user feedback.
+
+CURRENT STRUCTURE:
+{json.dumps(structure_dict, indent=2)}
+
+USER CLARIFICATIONS:
+{clarifications_text}
+{mode_refinement_instructions}
+INSTRUCTIONS:
+1. Apply the user's feedback to refine the deck structure
+2. Maintain the same JSON structure format
+3. Ensure image prompts include slide titles visually integrated
+4. Improve image prompts based on style feedback
+5. Adjust slide organization based on structure feedback
+6. Fill in missing information from content feedback
+7. Ensure brand consistency if mentioned
+
+Return a JSON response with this EXACT structure:
+{{
+  "refined_structure": {{
+    "deck_title": "string",
+    "slides": [
+{refinement_json_schema_slides}
+    ]
+  }}
+}}
+
+IMPORTANT:
+{refinement_important}"""

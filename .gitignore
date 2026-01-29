@@ -40,7 +40,6 @@ env/
 .DS_Store
 
 # Output
-src/output/
 output/*.pptx
 output/*.png
 output/*.jpg
@@ -52,6 +51,9 @@ content/
 
 # References
 references/
+
+# Output
+src/output/
 
 # Temporary
 temp_assets/

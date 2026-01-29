@@ -40,6 +40,9 @@ async def main():
         # Welcome
         cli.welcome()
 
+        # Select text content mode
+        text_mode = cli.prompt_mode_selection()
+
         # Load configuration
         try:
             config = ConfigLoader.from_env()
@@ -59,7 +62,7 @@ async def main():
             api_key=config.gemini_api_key,
             max_concurrent=config.max_concurrent_images
         )
-        content_parser = ContentParser(gemini_client)
+        content_parser = ContentParser(gemini_client, mode=text_mode)
         clarifier = Clarifier(gemini_client)
         image_factory = ImageFactory(gemini_client, config.max_concurrent_images)
         deck_assembler = DeckAssembler()

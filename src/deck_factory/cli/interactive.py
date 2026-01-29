@@ -45,6 +45,32 @@ class InteractiveCLI:
         ))
         self.console.print()
 
+    def prompt_mode_selection(self) -> str:
+        """
+        Prompt user to select text content generation mode.
+
+        Returns:
+            Mode string: 'minimal' or 'rich'
+        """
+        self.console.print("[bold]Text Content Mode[/bold]", style="cyan")
+        self.console.print()
+
+        # Display mode descriptions
+        self.console.print("Choose text content mode:")
+        self.console.print("  [cyan]minimal[/cyan] - Titles only, clean visual storytelling (default)")
+        self.console.print("  [magenta]rich[/magenta] - Full text content (bullets, statistics, callouts)")
+        self.console.print()
+
+        mode = Prompt.ask(
+            "Select mode",
+            choices=["minimal", "rich"],
+            default="minimal"
+        )
+
+        self.console.print(f"[green]✓[/green] Mode: {mode}")
+        self.console.print()
+        return mode
+
     def prompt_content_file(self) -> Path:
         """
         Prompt user for content file path.
