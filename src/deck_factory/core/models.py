@@ -14,7 +14,7 @@ class TextContent(BaseModel):
     """Structured text content for slide layouts."""
 
     bullets: Optional[List[str]] = Field(None, description="Bullet points (max 7)")
-    statistics: Optional[List[Dict[str, str]]] = Field(None, description="Stats with label and value")
+    statistics: Optional[List[Dict[str, str]]] = Field(None, description="Statistics with key-value pairs")
     paragraphs: Optional[List[str]] = Field(None, description="Short paragraphs (max 200 chars)")
     callouts: Optional[List[Dict[str, str]]] = Field(None, description="Callout boxes with title and text")
 
