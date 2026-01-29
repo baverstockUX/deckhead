@@ -180,8 +180,8 @@ INSTRUCTIONS:
 2. For each slide:
    - Create a concise title
    - Summarize the main content
-   - Generate a detailed image prompt (16:9 aspect ratio, professional quality)
-   - Suggest overlay text (short, impactful phrase)
+   - Generate a detailed image prompt that visually incorporates the slide title into the image composition (16:9 aspect ratio, professional quality). The AI should decide the best way to integrate the title based on the content and visual style.
+   - Set overlay_text to null (titles are now part of images)
    - Write speaker notes
 3. Generate clarification questions for:
    - Ambiguous structure (should topics be combined/split?)
@@ -198,8 +198,8 @@ Return a JSON response with this EXACT structure:
         "slide_number": 1,
         "title": "string",
         "content_summary": "string (brief description)",
-        "image_prompt": "string (detailed image generation prompt, minimum 20 words)",
-        "overlay_text": "string (short phrase, 3-7 words)",
+        "image_prompt": "string (detailed image generation prompt with title integrated, minimum 20 words)",
+        "overlay_text": null,
         "speaker_notes": "string (what presenter should say)"
       }}
     ]
@@ -216,6 +216,9 @@ Return a JSON response with this EXACT structure:
 }}
 
 IMPORTANT:
+- Image prompts must include the slide title visually integrated into the image
+- The AI should intelligently decide how to render titles (text overlay, part of scene, etc.)
+- Set overlay_text to null since titles are now in images
 - Image prompts must be detailed and specific for 16:9 aspect ratio
 - Only ask necessary clarification questions (2-5 questions)
 - Prioritize required questions
@@ -256,10 +259,11 @@ USER CLARIFICATIONS:
 INSTRUCTIONS:
 1. Apply the user's feedback to refine the deck structure
 2. Maintain the same JSON structure format
-3. Improve image prompts based on style feedback
-4. Adjust slide organization based on structure feedback
-5. Fill in missing information from content feedback
-6. Ensure brand consistency if mentioned
+3. Ensure image prompts include slide titles visually integrated
+4. Improve image prompts based on style feedback
+5. Adjust slide organization based on structure feedback
+6. Fill in missing information from content feedback
+7. Ensure brand consistency if mentioned
 
 Return a JSON response with this EXACT structure:
 {{
@@ -270,8 +274,8 @@ Return a JSON response with this EXACT structure:
         "slide_number": 1,
         "title": "string",
         "content_summary": "string",
-        "image_prompt": "string (refined based on feedback)",
-        "overlay_text": "string",
+        "image_prompt": "string (refined based on feedback, with title integrated)",
+        "overlay_text": null,
         "speaker_notes": "string"
       }}
     ]
@@ -281,5 +285,6 @@ Return a JSON response with this EXACT structure:
 IMPORTANT:
 - Incorporate ALL user feedback
 - Maintain slide numbering sequence
+- Ensure slide titles are incorporated into image prompts
 - Enhance image prompts with style preferences
 - Keep 16:9 aspect ratio in mind"""

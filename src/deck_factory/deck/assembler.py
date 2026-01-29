@@ -110,9 +110,8 @@ class DeckAssembler:
             # Add full-bleed image
             self._add_full_bleed_image(slide, image.image_data)
 
-            # Add text overlay if present
-            if slide_content.overlay_text:
-                self._add_overlay_text(slide, slide_content.overlay_text)
+            # Titles are now incorporated into images, no overlay needed
+            # Previously: overlay text was added here with black background
 
             # Add speaker notes if present
             if slide_content.speaker_notes:

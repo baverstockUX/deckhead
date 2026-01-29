@@ -111,9 +111,7 @@ async def main():
         request = ImageGenerationRequest(
             slide_number=slide.slide_number,
             prompt=slide.image_prompt,
-            aspect_ratio="16:9",
-            overlay_text=slide.overlay_text or "",
-            output_filename=f"slide_{slide.slide_number}.png"
+            aspect_ratio="16:9"
         )
         image_requests.append(request)
     print(f"✓ Prepared {len(image_requests)} image generation requests")
