@@ -213,9 +213,9 @@ INSTRUCTIONS:
 
 4. TEXT CONTENT STRUCTURE (only if substantial content exists):
    - bullets: Array of concise bullet points (3-7 items, max 60 chars each)
-   - statistics: Array of {"label": "Metric", "value": "123%"} for key numbers
+   - statistics: Array of {{"label": "Metric", "value": "123%"}} for key numbers
    - paragraphs: Array of short paragraphs (1-3 sentences, max 200 chars)
-   - callouts: Array of {"title": "Title", "text": "content"} for highlighted information
+   - callouts: Array of {{"title": "Title", "text": "content"}} for highlighted information
 
 5. LAYOUT SELECTION GUIDANCE:
    - split-left/split-right: Best for balanced visual + text (bullets, lists)
