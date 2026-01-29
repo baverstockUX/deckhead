@@ -1,0 +1,30 @@
+# Core dependencies
+python-pptx>=0.6.23          # PowerPoint generation
+pydantic>=2.5.0              # Data validation
+python-dotenv>=1.0.0         # Environment variable loading
+aiohttp>=3.9.0               # Async HTTP client
+
+# Gemini API
+google-genai>=0.2.0          # Official Gemini Python SDK (new version)
+
+# CLI enhancements
+rich>=13.7.0                 # Beautiful terminal output
+prompt-toolkit>=3.0.43       # Interactive prompts
+
+# Image processing
+Pillow>=10.1.0               # Image validation and processing
+
+# Utilities
+aiofiles>=23.2.1             # Async file operations
+tenacity>=8.2.3              # Retry logic with backoff
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+
+# Development
+black>=23.12.0               # Code formatting
+ruff>=0.1.9                  # Fast linting
+mypy>=1.8.0                  # Type checking
