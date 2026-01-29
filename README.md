@@ -2,65 +2,92 @@
 
 AI-powered PowerPoint presentation generator using Google Gemini.
 
-Transform plain text or markdown content into professional presentations with AI-generated images, smart content structuring, and interactive clarification questions.
+Transform plain text or markdown content into professional presentations with AI-generated images, intelligent text layouts, and interactive clarification questions.
 
 ## Features
 
 - **Smart Content Parsing**: Gemini Flash analyzes your content and structures it into logical slides
-- **AI Image Generation**: Gemini Imagen generates professional images for each slide
+- **AI Image Generation**: Gemini Imagen generates professional images for each slide with integrated titles
+- **Intelligent Text Layouts**: AI selects optimal layouts per slide (image-only, split, panel, overlay)
+- **Infographics Support**: Generates chart and diagram-style visuals for data-heavy slides
+- **Structured Text Content**: Bullets, statistics, paragraphs, and callout boxes automatically extracted
 - **Brand Consistency**: Pass reference images to maintain visual style across all slides
 - **Interactive Clarification**: AI asks questions to refine the presentation
 - **Parallel Processing**: Async image generation for fast performance
 - **Beautiful CLI**: Rich terminal interface with progress tracking
 
-## Installation
+## Quick Start
 
-1. **Clone or download this repository**
+### 1. Install Dependencies
 
-2. **Install Python dependencies**:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **Set up your Gemini API key**:
+### 2. Set Up API Key
 
-Create a `.env` file in the project root (already exists) with your API key:
+Create a `.env` file in the project root with your Gemini API key:
 ```bash
 gemini_key='your-api-key-here'
 ```
 
 Get your API key from: https://makersuite.google.com/app/apikey
 
-## Usage
+### 3. Create Your Content
 
-### Quick Start
+Create a markdown or text file in the `content/` directory:
 
-Run the interactive CLI:
+```markdown
+# My Presentation Title
+
+## Introduction
+Your introduction content here...
+
+## Main Topic 1
+Key points and details...
+
+## Conclusion
+Wrap up your presentation...
+```
+
+### 4. Run Deckhead
+
 ```bash
 python -m src.deck_factory
 ```
 
-Or from the project root:
-```bash
-cd /Users/christian.baverstock/code/pow
-python -m src.deck_factory
-```
+Follow the interactive prompts:
+1. Enter path to your content file (e.g., `content/my_presentation.md`)
+2. Optionally add brand reference images
+3. Answer clarification questions from the AI
+4. Wait for images to generate
+5. Get your PowerPoint file in the `src/output/` directory!
 
-### Step-by-Step Workflow
+## Slide Layouts
 
-1. **Content Input**: Provide a markdown or text file with your content
-2. **Brand Assets** (Optional): Add reference images for style consistency
-3. **AI Analysis**: Gemini parses content and structures slides
-4. **Clarification**: Answer AI-generated questions to refine the deck
-5. **Generation**: Images are generated and presentation is assembled
+The AI automatically selects the best layout for each slide based on content:
 
-### Example
+- **image-only**: Pure visual storytelling with title integrated into image (default)
+- **split-left**: Image on left, text content on right (balanced visual + text)
+- **split-right**: Image on right, text content on left
+- **panel**: Full-width image on top, text panel below
+- **overlay**: Minimal text overlaid on image
 
-Try the sample content:
-```bash
-python -m src.deck_factory
-# When prompted, enter: examples/sample_presentation.md
-```
+Text content can include:
+- **Bullets**: Concise points (max 7)
+- **Statistics**: Key metrics with labels and values
+- **Paragraphs**: Short explanatory text
+- **Callouts**: Highlighted information boxes
+
+## Brand Assets
+
+To maintain visual consistency, provide reference images:
+
+1. Place brand images (logos, colors, style examples) in the `references/` directory
+2. When prompted, enter the directory path or comma-separated file paths
+3. All generated images will match the style of your references
+
+Supported formats: `.jpg`, `.jpeg`, `.png`, `.webp`
 
 ## Project Structure
 
@@ -74,80 +101,46 @@ pow/
 │   ├── __main__.py               # Entry point
 │   ├── core/                     # Core functionality
 │   │   ├── config.py             # Configuration loader
-│   │   ├── models.py             # Data models
+│   │   ├── models.py             # Data models (5 layout types)
 │   │   └── exceptions.py         # Custom exceptions
 │   ├── ai/                       # AI components
 │   │   ├── gemini_client.py      # Gemini API wrapper
-│   │   ├── content_parser.py     # Content parsing
+│   │   ├── content_parser.py     # Content parsing & layout selection
 │   │   ├── clarifier.py          # Question generation
-│   │   └── image_factory.py      # Image generation
+│   │   └── image_factory.py      # Image generation (infographic support)
 │   ├── deck/                     # PowerPoint assembly
-│   │   └── assembler.py          # PPTX creation
+│   │   └── assembler.py          # PPTX creation (5 layout types)
 │   └── cli/                      # User interface
 │       └── interactive.py        # Interactive CLI
 │
-├── examples/                     # Example content files
-│   └── sample_presentation.md
+├── content/                      # Your content files (gitignored)
+│   └── my_presentation.md
 │
-├── output/                       # Generated presentations (created automatically)
+├── references/                   # Brand reference images (gitignored)
+│   └── brand_logo.png
+│
+├── src/output/                   # Generated presentations (created automatically)
 └── temp_assets/                  # Temporary files (created automatically)
 ```
-
-## Content Format
-
-Write your content in plain text or markdown. The AI will automatically:
-- Break it into logical slides
-- Generate titles and summaries
-- Create image prompts
-- Write speaker notes
-
-### Example Content
-
-```markdown
-# My Presentation Title
-
-## Introduction
-Your introduction content here...
-
-## Main Topic 1
-Key points and details...
-
-## Main Topic 2
-More content...
-
-## Conclusion
-Wrap up your presentation...
-```
-
-## Brand Assets
-
-To maintain visual consistency, provide reference images:
-
-1. Place brand images (logos, colors, style examples) in a directory
-2. When prompted, enter the directory path or comma-separated file paths
-3. All generated images will match the style of your references
-
-Supported formats: `.jpg`, `.jpeg`, `.png`, `.webp`
 
 ## Configuration
 
 Optional environment variables (in `.env`):
 
 ```bash
-# API Configuration
-GEMINI_API_KEY=your_api_key_here
-gemini_key=your_api_key_here  # Alternative format (currently used)
+# API Configuration (required)
+gemini_key=your_api_key_here
 
 # Generation Settings (optional)
-MAX_CONCURRENT_IMAGES=5       # Concurrent image generations
-TEMP_DIR=./temp_assets        # Temporary file directory
-OUTPUT_DIR=./output           # Output directory for presentations
+MAX_CONCURRENT_IMAGES=5       # Concurrent image generations (default: 5)
+TEMP_DIR=./temp_assets        # Temporary file directory (default: ./temp_assets)
+OUTPUT_DIR=./src/output       # Output directory for presentations (default: ./src/output)
 ```
 
 ## API Models Used
 
-- **Text Generation**: `gemini-2.0-flash-exp` - Fast, efficient content parsing
-- **Image Generation**: `imagen-3.0-generate-001` - High-quality image generation
+- **Text Generation**: `gemini-3-flash-preview` - Fast, efficient content parsing and layout decisions
+- **Image Generation**: `gemini-3-pro-image-preview` - High-quality image generation with infographic support
 
 ## Performance
 
@@ -155,20 +148,65 @@ OUTPUT_DIR=./output           # Output directory for presentations
 - **Image Generation**: ~4 seconds per image (API dependent)
 - **10-slide deck**: ~30 seconds total (with 5 concurrent requests)
 
+## Content Format
+
+Write your content in plain text or markdown. The AI will automatically:
+- Break it into logical slides
+- Generate titles integrated into images
+- Decide optimal layout per slide (image-only, split, panel, overlay)
+- Extract structured text content (bullets, statistics, paragraphs)
+- Generate infographic-style images for data-heavy slides
+- Create image prompts matching your content
+- Write speaker notes
+
+### Example Content
+
+```markdown
+# Product Launch Presentation
+
+## Market Overview
+The market is growing at 15% annually. Key trends include:
+- Digital transformation
+- Mobile-first experiences
+- AI integration
+
+Statistics:
+- Market size: $50B
+- Growth rate: 15% YoY
+- Adoption: 78% of enterprises
+
+## Our Solution
+A revolutionary platform that combines ease-of-use with enterprise power...
+
+## Competitive Advantage
+What sets us apart from competitors...
+```
+
+The AI will:
+- Create an **image-only** slide for "Our Solution" (visual storytelling)
+- Use **split-left** layout for "Market Overview" (image + bullets + stats)
+- Generate **infographic-style** image for statistics
+- Choose **panel** layout for "Competitive Advantage" (image + text)
+
 ## Troubleshooting
 
 ### "Missing API Key" Error
 - Check that `.env` file exists in project root
-- Verify API key is set: `gemini_key='your-key'` or `GEMINI_API_KEY=your-key`
+- Verify API key is set: `gemini_key='your-key'`
 
 ### Image Generation Fails
 - Check API quota at https://console.cloud.google.com/
-- Reduce concurrent requests by lowering `MAX_CONCURRENT_IMAGES`
-- Verify reference images are in supported formats
+- Reduce concurrent requests: `MAX_CONCURRENT_IMAGES=3` in `.env`
+- Verify reference images are in supported formats (jpg, png, webp)
 
 ### "Module not found" Error
 - Install dependencies: `pip install -r requirements.txt`
 - Run from project root: `python -m src.deck_factory`
+
+### Content Not Displaying on Slides
+- Ensure content has substantial text (3+ bullets or meaningful paragraphs)
+- AI defaults to image-only layout when content is minimal
+- Check that content is structured properly (headings, bullets, etc.)
 
 ## Development
 
@@ -189,17 +227,30 @@ mypy src/
 
 ## Architecture
 
-Deckhead uses a modular architecture:
+Deckhead uses a modular architecture with AI-driven layout selection:
 
 1. **ConfigLoader**: Manages environment and settings
 2. **GeminiClient**: Unified API wrapper for text and image generation
-3. **ContentParser**: Parses content into structured format
+3. **ContentParser**: Parses content into structured format with layout decisions
 4. **Clarifier**: Generates and validates clarification questions
-5. **ImageFactory**: Async parallel image generation
-6. **DeckAssembler**: Creates PowerPoint with python-pptx
+5. **ImageFactory**: Async parallel image generation with infographic support
+6. **DeckAssembler**: Creates PowerPoint with 5 layout types (python-pptx)
 7. **InteractiveCLI**: Rich terminal interface
 
 All components use Pydantic models for type safety and validation.
+
+## Recent Updates
+
+### v0.2 - Text Content & Infographics (Jan 2026)
+- ✨ Added 5 intelligent slide layouts (image-only, split, panel, overlay)
+- ✨ AI-driven layout selection per slide
+- ✨ Structured text content support (bullets, statistics, paragraphs, callouts)
+- ✨ Infographic-style image generation for data-heavy slides
+- ✨ Professional typography and spacing
+
+### v0.1 - Title Integration (Jan 2026)
+- ✨ Integrated slide titles into images (no more overlays)
+- 🐛 Fixed title overlay transparency issues
 
 ## License
 
@@ -215,8 +266,8 @@ For issues, questions, or contributions:
 ## Credits
 
 Built with:
-- Google Gemini API
-- python-pptx
+- Google Gemini API (Gemini 3 Flash + Gemini 3 Pro Image)
+- python-pptx (PowerPoint generation)
 - Rich (terminal UI)
 - Pydantic (validation)
 - asyncio (concurrency)
