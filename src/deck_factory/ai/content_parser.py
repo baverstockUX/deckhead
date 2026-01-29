@@ -9,7 +9,7 @@ import json
 from typing import Tuple, List
 
 from .gemini_client import GeminiClient
-from ..core.models import DeckStructure, SlideContent, ClarificationQuestion, ClarificationResponse
+from ..core.models import DeckStructure, SlideContent, ClarificationQuestion, ClarificationResponse, TextContent
 from ..core.exceptions import InvalidResponseError, GenerationFailedError
 
 
@@ -68,13 +68,22 @@ class ContentParser:
         # Build SlideContent objects
         slides = []
         for slide_data in deck_data.get("slides", []):
+            # Extract text_content if present
+            text_content = None
+            if slide_data.get("text_content"):
+                text_content = TextContent(**slide_data.get("text_content"))
+
             slide = SlideContent(
                 slide_number=slide_data.get("slide_number"),
                 title=slide_data.get("title"),
                 content_summary=slide_data.get("content_summary"),
                 image_prompt=slide_data.get("image_prompt"),
                 overlay_text=slide_data.get("overlay_text"),
-                speaker_notes=slide_data.get("speaker_notes")
+                speaker_notes=slide_data.get("speaker_notes"),
+                # New fields for text content feature
+                layout_type=slide_data.get("layout_type", "image-only"),
+                text_content=text_content,
+                infographic_style=slide_data.get("infographic_style", False)
             )
             slides.append(slide)
 
@@ -141,13 +150,22 @@ class ContentParser:
         # Build refined SlideContent objects
         slides = []
         for slide_data in deck_data.get("slides", []):
+            # Extract text_content if present
+            text_content = None
+            if slide_data.get("text_content"):
+                text_content = TextContent(**slide_data.get("text_content"))
+
             slide = SlideContent(
                 slide_number=slide_data.get("slide_number"),
                 title=slide_data.get("title"),
                 content_summary=slide_data.get("content_summary"),
                 image_prompt=slide_data.get("image_prompt"),
                 overlay_text=slide_data.get("overlay_text"),
-                speaker_notes=slide_data.get("speaker_notes")
+                speaker_notes=slide_data.get("speaker_notes"),
+                # New fields for text content feature
+                layout_type=slide_data.get("layout_type", "image-only"),
+                text_content=text_content,
+                infographic_style=slide_data.get("infographic_style", False)
             )
             slides.append(slide)
 
