@@ -116,7 +116,8 @@ async def main():
             ImageGenerationRequest(
                 slide_number=slide.slide_number,
                 prompt=slide.image_prompt,
-                aspect_ratio="16:9"
+                aspect_ratio="16:9",
+                infographic_style=getattr(slide, 'infographic_style', False)
             )
             for slide in deck_structure.slides
         ]

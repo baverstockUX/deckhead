@@ -133,7 +133,8 @@ class ImageFactory:
                 # Enhance prompt with brand style if provided
                 enhanced_prompt = self._build_image_prompt(
                     request.prompt,
-                    reference_image_data
+                    reference_image_data,
+                    infographic_style=getattr(request, 'infographic_style', False)
                 )
 
                 # Generate image
@@ -168,7 +169,8 @@ class ImageFactory:
     def _build_image_prompt(
         self,
         base_prompt: str,
-        reference_image_data: Optional[List[bytes]]
+        reference_image_data: Optional[List[bytes]],
+        infographic_style: bool = False
     ) -> str:
         """
         Enhance image prompt with style context.
@@ -176,24 +178,35 @@ class ImageFactory:
         Args:
             base_prompt: Base image generation prompt
             reference_image_data: Brand reference images (if available)
+            infographic_style: Whether to generate infographic-style image
 
         Returns:
             Enhanced prompt string
         """
+        # Add infographic style prefix if needed
+        if infographic_style:
+            infographic_instruction = (
+                "Create an infographic-style data visualization: clean charts, graphs, or diagrams "
+                "with clear labels, modern color palette, minimal text, professional business style. "
+            )
+            enhanced_prompt = infographic_instruction + base_prompt
+        else:
+            enhanced_prompt = base_prompt
+
         # If brand references provided, add style consistency instruction
         if reference_image_data:
             style_instruction = (
                 "Match the visual style, color palette, and aesthetic of the provided reference images. "
                 "Maintain brand consistency while incorporating the following concept: "
             )
-            return style_instruction + base_prompt
+            return style_instruction + enhanced_prompt
 
         # Otherwise, add general quality instructions
         quality_prefix = (
             "Professional quality, photorealistic or illustrated style, "
             "clean composition, 16:9 aspect ratio, suitable for business presentation. "
         )
-        return quality_prefix + base_prompt
+        return quality_prefix + enhanced_prompt
 
     async def generate_single_with_retry(
         self,

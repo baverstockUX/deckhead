@@ -177,13 +177,35 @@ CONTENT:
 
 INSTRUCTIONS:
 1. Break the content into logical slides (minimum 1, maximum 20)
-2. For each slide:
+2. For each slide, decide the OPTIMAL LAYOUT based on content:
+   - "image-only": Pure visual storytelling, no substantial text needed (default)
+   - "split-left": Image left, text content right (for balanced visual + text)
+   - "split-right": Image right, text content left
+   - "panel": Full-width image top, text panel below
+   - "overlay": Minimal text overlaid on image (use sparingly)
+
+3. For each slide:
    - Create a concise title
-   - Summarize the main content
-   - Generate a detailed image prompt that visually incorporates the slide title into the image composition (16:9 aspect ratio, professional quality). The AI should decide the best way to integrate the title based on the content and visual style.
-   - Set overlay_text to null (titles are now part of images)
+   - Decide if substantial TEXT CONTENT exists (3+ bullets, statistics, or meaningful paragraphs)
+   - If YES: Choose appropriate layout (split-left/split-right/panel) and structure the content
+   - If NO: Use "image-only" layout
+   - Generate detailed image prompt with title integrated (16:9 aspect ratio, professional quality)
+   - For data-heavy slides with statistics/numbers, set infographic_style: true to generate chart-like visuals
    - Write speaker notes
-3. Generate clarification questions for:
+
+4. TEXT CONTENT STRUCTURE (only if substantial content exists):
+   - bullets: Array of concise bullet points (3-7 items, max 60 chars each)
+   - statistics: Array of {label: "Metric", value: "123%"} for key numbers
+   - paragraphs: Array of short paragraphs (1-3 sentences, max 200 chars)
+   - callouts: Array of {title: "Title", text: "content"} for highlighted information
+
+5. LAYOUT SELECTION GUIDANCE:
+   - split-left/split-right: Best for balanced visual + text (bullets, lists)
+   - panel: Best for image-first with supporting text below
+   - overlay: Only for minimal text (1-2 short lines)
+   - image-only: Default when visual tells the complete story
+
+6. Generate clarification questions for:
    - Ambiguous structure (should topics be combined/split?)
    - Visual style preferences (if not clear from content)
    - Missing information (deck title, specific details)
@@ -198,7 +220,15 @@ Return a JSON response with this EXACT structure:
         "slide_number": 1,
         "title": "string",
         "content_summary": "string (brief description)",
+        "layout_type": "image-only|split-left|split-right|panel|overlay",
+        "text_content": {{
+          "bullets": ["point 1", "point 2"],
+          "statistics": [{{"label": "Metric", "value": "123%"}}],
+          "paragraphs": ["text"],
+          "callouts": [{{"title": "Important", "text": "key info"}}]
+        }},
         "image_prompt": "string (detailed image generation prompt with title integrated, minimum 20 words)",
+        "infographic_style": true|false,
         "overlay_text": null,
         "speaker_notes": "string (what presenter should say)"
       }}
@@ -217,11 +247,14 @@ Return a JSON response with this EXACT structure:
 
 IMPORTANT:
 - Image prompts must include the slide title visually integrated into the image
-- The AI should intelligently decide how to render titles (text overlay, part of scene, etc.)
-- Set overlay_text to null since titles are now in images
-- Image prompts must be detailed and specific for 16:9 aspect ratio
+- Only include text_content if substantial content exists (not just rephrasing the title)
+- Default to "image-only" layout when in doubt
+- For statistics/data slides, use infographic_style: true to generate chart-like images
+- Bullet points must be concise and scannable (max 60 chars each)
+- Text content should complement, not duplicate, the image
+- Set overlay_text to null (deprecated field)
+- Maintain professional presentation standards (not cluttered)
 - Only ask necessary clarification questions (2-5 questions)
-- Prioritize required questions
 - Make smart assumptions where reasonable"""
 
     def _build_refinement_prompt(
@@ -260,10 +293,13 @@ INSTRUCTIONS:
 1. Apply the user's feedback to refine the deck structure
 2. Maintain the same JSON structure format
 3. Ensure image prompts include slide titles visually integrated
-4. Improve image prompts based on style feedback
-5. Adjust slide organization based on structure feedback
-6. Fill in missing information from content feedback
-7. Ensure brand consistency if mentioned
+4. Ensure layout decisions are appropriate for content (image-only, split-left, split-right, panel, overlay)
+5. Maintain or adjust text_content structure based on feedback
+6. Improve image prompts based on style feedback
+7. Adjust slide organization based on structure feedback
+8. Fill in missing information from content feedback
+9. Ensure brand consistency if mentioned
+10. Use infographic_style: true for data-heavy slides
 
 Return a JSON response with this EXACT structure:
 {{
@@ -274,7 +310,15 @@ Return a JSON response with this EXACT structure:
         "slide_number": 1,
         "title": "string",
         "content_summary": "string",
+        "layout_type": "image-only|split-left|split-right|panel|overlay",
+        "text_content": {{
+          "bullets": ["point 1", "point 2"],
+          "statistics": [{{"label": "Metric", "value": "123%"}}],
+          "paragraphs": ["text"],
+          "callouts": [{{"title": "Important", "text": "key info"}}]
+        }},
         "image_prompt": "string (refined based on feedback, with title integrated)",
+        "infographic_style": true|false,
         "overlay_text": null,
         "speaker_notes": "string"
       }}
@@ -286,5 +330,8 @@ IMPORTANT:
 - Incorporate ALL user feedback
 - Maintain slide numbering sequence
 - Ensure slide titles are incorporated into image prompts
+- Ensure appropriate layout_type for each slide's content
+- Include text_content only when substantial content exists
+- Use infographic_style: true for data-heavy slides
 - Enhance image prompts with style preferences
 - Keep 16:9 aspect ratio in mind"""

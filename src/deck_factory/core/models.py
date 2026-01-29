@@ -6,8 +6,25 @@ used throughout the application.
 """
 
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pathlib import Path
+
+
+class TextContent(BaseModel):
+    """Structured text content for slide layouts."""
+
+    bullets: Optional[List[str]] = Field(None, description="Bullet points (max 7)")
+    statistics: Optional[List[Dict[str, str]]] = Field(None, description="Stats with label and value")
+    paragraphs: Optional[List[str]] = Field(None, description="Short paragraphs (max 200 chars)")
+    callouts: Optional[List[Dict[str, str]]] = Field(None, description="Callout boxes with title and text")
+
+    @field_validator('bullets')
+    @classmethod
+    def validate_bullet_count(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Validate that bullets don't exceed maximum count."""
+        if v and len(v) > 7:
+            raise ValueError('Maximum 7 bullets per slide')
+        return v
 
 
 class SlideContent(BaseModel):
@@ -19,6 +36,29 @@ class SlideContent(BaseModel):
     image_prompt: str = Field(min_length=10, description="Prompt for image generation")
     overlay_text: Optional[str] = Field(None, description="Text to overlay on the slide")
     speaker_notes: Optional[str] = Field(None, description="Speaker notes for the slide")
+
+    # New fields for text content and layout
+    layout_type: str = Field(
+        default="image-only",
+        description="Layout type: image-only, split-left, split-right, panel, overlay"
+    )
+    text_content: Optional[TextContent] = Field(
+        None,
+        description="Structured text content for non-image-only layouts"
+    )
+    infographic_style: bool = Field(
+        default=False,
+        description="Whether to generate image in infographic style"
+    )
+
+    @field_validator('layout_type')
+    @classmethod
+    def validate_layout(cls, v: str) -> str:
+        """Validate layout type is one of the allowed values."""
+        allowed = {'image-only', 'split-left', 'split-right', 'panel', 'overlay'}
+        if v not in allowed:
+            raise ValueError(f'Invalid layout_type: {v}. Must be one of {allowed}')
+        return v
 
 
 class DeckStructure(BaseModel):
@@ -70,6 +110,7 @@ class ImageGenerationRequest(BaseModel):
     prompt: str = Field(min_length=10, description="Image generation prompt")
     reference_images: Optional[List[Path]] = Field(None, description="Brand reference image paths")
     aspect_ratio: str = Field(default="16:9", description="Image aspect ratio")
+    infographic_style: bool = Field(default=False, description="Generate infographic-style image")
 
     @field_validator('aspect_ratio')
     @classmethod
