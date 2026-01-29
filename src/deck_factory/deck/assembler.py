@@ -92,7 +92,10 @@ class DeckAssembler:
         image: GeneratedImage
     ) -> None:
         """
-        Create a single slide with image and text overlay.
+        Create a single slide with full-bleed image.
+
+        All text content is now baked into the generated image,
+        so all slides use the same full-bleed layout.
 
         Args:
             prs: Presentation object
@@ -107,21 +110,10 @@ class DeckAssembler:
             blank_slide_layout = prs.slide_layouts[6]
             slide = prs.slides.add_slide(blank_slide_layout)
 
-            # Route to appropriate layout handler based on layout_type
-            layout_type = getattr(slide_content, 'layout_type', 'image-only')
+            # ALL slides now use full-bleed images (text is baked in)
+            self._add_full_bleed_image(slide, image.image_data)
 
-            if layout_type == "split-left":
-                self._create_split_left_slide(slide, slide_content, image.image_data)
-            elif layout_type == "split-right":
-                self._create_split_right_slide(slide, slide_content, image.image_data)
-            elif layout_type == "panel":
-                self._create_panel_slide(slide, slide_content, image.image_data)
-            elif layout_type == "overlay":
-                self._create_overlay_slide(slide, slide_content, image.image_data)
-            else:  # Default: image-only
-                self._add_full_bleed_image(slide, image.image_data)
-
-            # Add speaker notes if present
+            # Add speaker notes if present (non-visual, preserved)
             if slide_content.speaker_notes:
                 self._add_speaker_notes(slide, slide_content.speaker_notes)
 
@@ -157,63 +149,6 @@ class DeckAssembler:
         except Exception as e:
             raise ImageProcessingError(f"Failed to add image to slide: {e}")
 
-    def _add_overlay_text(
-        self,
-        slide,
-        text: str,
-        position: str = "bottom"
-    ) -> None:
-        """
-        Add text overlay with semi-transparent background.
-
-        Args:
-            slide: Slide object
-            text: Text to overlay
-            position: Position on slide ("bottom", "top", "center")
-        """
-        # Calculate position based on parameter
-        if position == "bottom":
-            left = Inches(0.5)
-            top = Inches(6.0)
-            width = Inches(12.333)
-            height = Inches(1.0)
-        elif position == "top":
-            left = Inches(0.5)
-            top = Inches(0.5)
-            width = Inches(12.333)
-            height = Inches(1.0)
-        else:  # center
-            left = Inches(0.5)
-            top = Inches(3.0)
-            width = Inches(12.333)
-            height = Inches(1.5)
-
-        # Add text box
-        textbox = slide.shapes.add_textbox(left, top, width, height)
-
-        # Set semi-transparent background
-        fill = textbox.fill
-        fill.solid()
-        fill.fore_color.rgb = RGBColor(0, 0, 0)  # Black background
-        textbox.fill.transparency = 0.3  # 30% transparent
-
-        # Configure text frame
-        text_frame = textbox.text_frame
-        text_frame.word_wrap = True
-        text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-
-        # Add text
-        p = text_frame.paragraphs[0]
-        p.text = text
-        p.alignment = PP_ALIGN.CENTER
-
-        # Format text
-        font = p.font
-        font.name = 'Arial'
-        font.size = Pt(36)
-        font.bold = True
-        font.color.rgb = RGBColor(255, 255, 255)  # White text
-
     def _add_speaker_notes(self, slide, notes: str) -> None:
         """
         Add speaker notes to slide.
@@ -230,227 +165,6 @@ class DeckAssembler:
 
         # Add notes
         text_frame.text = notes
-
-    def _create_split_left_slide(
-        self,
-        slide,
-        slide_content: SlideContent,
-        image_data: bytes
-    ) -> None:
-        """
-        Create slide with image on left half, text content on right half.
-
-        Args:
-            slide: Slide object
-            slide_content: Slide content definition
-            image_data: Raw image data bytes
-        """
-        # Image: Left half (6.667" x 7.5")
-        image_stream = io.BytesIO(image_data)
-        slide.shapes.add_picture(
-            image_stream,
-            left=0,
-            top=0,
-            width=Inches(6.667),
-            height=Inches(7.5)
-        )
-
-        # Text content box: Right half
-        text_left = Inches(6.667)
-        text_top = Inches(0.75)
-        text_width = Inches(6.0)
-        text_height = Inches(6.0)
-
-        textbox = slide.shapes.add_textbox(text_left, text_top, text_width, text_height)
-
-        # White semi-transparent background for readability
-        fill = textbox.fill
-        fill.solid()
-        fill.fore_color.rgb = RGBColor(255, 255, 255)
-        textbox.fill.transparency = 0.05
-
-        # Populate with structured content
-        if slide_content.text_content:
-            self._populate_text_content(textbox.text_frame, slide_content.text_content)
-
-    def _create_split_right_slide(
-        self,
-        slide,
-        slide_content: SlideContent,
-        image_data: bytes
-    ) -> None:
-        """
-        Create slide with text content on left half, image on right half.
-
-        Args:
-            slide: Slide object
-            slide_content: Slide content definition
-            image_data: Raw image data bytes
-        """
-        # Text content box: Left half
-        text_left = Inches(0.667)
-        text_top = Inches(0.75)
-        text_width = Inches(6.0)
-        text_height = Inches(6.0)
-
-        textbox = slide.shapes.add_textbox(text_left, text_top, text_width, text_height)
-
-        # White semi-transparent background for readability
-        fill = textbox.fill
-        fill.solid()
-        fill.fore_color.rgb = RGBColor(255, 255, 255)
-        textbox.fill.transparency = 0.05
-
-        # Populate with structured content
-        if slide_content.text_content:
-            self._populate_text_content(textbox.text_frame, slide_content.text_content)
-
-        # Image: Right half (6.667" x 7.5")
-        image_stream = io.BytesIO(image_data)
-        slide.shapes.add_picture(
-            image_stream,
-            left=Inches(6.667),
-            top=0,
-            width=Inches(6.667),
-            height=Inches(7.5)
-        )
-
-    def _create_panel_slide(
-        self,
-        slide,
-        slide_content: SlideContent,
-        image_data: bytes
-    ) -> None:
-        """
-        Create slide with full-width image on top, text panel below.
-
-        Args:
-            slide: Slide object
-            slide_content: Slide content definition
-            image_data: Raw image data bytes
-        """
-        # Image: Top 2/3 (13.333" x 5")
-        image_stream = io.BytesIO(image_data)
-        slide.shapes.add_picture(
-            image_stream,
-            left=0,
-            top=0,
-            width=Inches(13.333),
-            height=Inches(5.0)
-        )
-
-        # Text panel: Bottom 1/3
-        panel_left = Inches(0.5)
-        panel_top = Inches(5.25)
-        panel_width = Inches(12.333)
-        panel_height = Inches(2.0)
-
-        textbox = slide.shapes.add_textbox(panel_left, panel_top, panel_width, panel_height)
-
-        # Light background for contrast
-        fill = textbox.fill
-        fill.solid()
-        fill.fore_color.rgb = RGBColor(245, 245, 245)  # Light gray
-
-        # Populate with structured content
-        if slide_content.text_content:
-            self._populate_text_content(textbox.text_frame, slide_content.text_content)
-
-    def _create_overlay_slide(
-        self,
-        slide,
-        slide_content: SlideContent,
-        image_data: bytes
-    ) -> None:
-        """
-        Create slide with minimal text overlaid on full-bleed image.
-
-        Args:
-            slide: Slide object
-            slide_content: Slide content definition
-            image_data: Raw image data bytes
-        """
-        # Full-bleed image
-        self._add_full_bleed_image(slide, image_data)
-
-        # Minimal overlay text (reuse existing _add_overlay_text method)
-        if slide_content.text_content and slide_content.text_content.paragraphs:
-            text = slide_content.text_content.paragraphs[0]
-            self._add_overlay_text(slide, text, position="bottom")
-
-    def _populate_text_content(self, text_frame, content: TextContent) -> None:
-        """
-        Populate text frame with structured content.
-
-        Args:
-            text_frame: PowerPoint text frame object
-            content: TextContent model with bullets, statistics, paragraphs, callouts
-        """
-        text_frame.clear()
-        text_frame.word_wrap = True
-        text_frame.margin_left = Inches(0.3)
-        text_frame.margin_right = Inches(0.3)
-        text_frame.margin_top = Inches(0.3)
-        text_frame.margin_bottom = Inches(0.3)
-
-        # Add bullets
-        if content.bullets:
-            for i, bullet in enumerate(content.bullets):
-                p = text_frame.add_paragraph() if i > 0 else text_frame.paragraphs[0]
-                p.text = bullet
-                p.level = 0
-                p.font.name = 'Arial'
-                p.font.size = Pt(18)
-                p.font.color.rgb = RGBColor(50, 50, 50)  # Dark gray
-                p.space_after = Pt(10)
-
-        # Add statistics (formatted distinctly)
-        if content.statistics:
-            for stat in content.statistics:
-                p = text_frame.add_paragraph()
-                p.text = f"{stat['label']}: "
-                p.font.name = 'Arial'
-                p.font.size = Pt(16)
-                p.font.color.rgb = RGBColor(100, 100, 100)  # Medium gray
-
-                # Add value in bold
-                run = p.add_run()
-                run.text = stat['value']
-                run.font.bold = True
-                run.font.size = Pt(24)
-                run.font.color.rgb = RGBColor(0, 102, 204)  # Blue accent
-                p.space_after = Pt(12)
-
-        # Add paragraphs
-        if content.paragraphs:
-            for para_text in content.paragraphs:
-                p = text_frame.add_paragraph()
-                p.text = para_text
-                p.font.name = 'Arial'
-                p.font.size = Pt(14)
-                p.font.color.rgb = RGBColor(60, 60, 60)
-                p.space_after = Pt(10)
-                p.line_spacing = 1.2
-
-        # Add callouts (with visual distinction)
-        if content.callouts:
-            for callout in content.callouts:
-                # Title
-                p = text_frame.add_paragraph()
-                p.text = callout['title']
-                p.font.name = 'Arial'
-                p.font.size = Pt(16)
-                p.font.bold = True
-                p.font.color.rgb = RGBColor(204, 102, 0)  # Orange accent
-                p.space_after = Pt(4)
-
-                # Text
-                p = text_frame.add_paragraph()
-                p.text = callout['text']
-                p.font.name = 'Arial'
-                p.font.size = Pt(14)
-                p.font.color.rgb = RGBColor(60, 60, 60)
-                p.space_after = Pt(15)
 
     def create_title_slide(
         self,

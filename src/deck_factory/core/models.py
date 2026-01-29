@@ -111,6 +111,8 @@ class ImageGenerationRequest(BaseModel):
     reference_images: Optional[List[Path]] = Field(None, description="Brand reference image paths")
     aspect_ratio: str = Field(default="16:9", description="Image aspect ratio")
     infographic_style: bool = Field(default=False, description="Generate infographic-style image")
+    layout_type: Optional[str] = Field(None, description="Layout type for prompt enhancement")
+    text_content: Optional['TextContent'] = Field(None, description="Structured text to bake into image")
 
     @field_validator('aspect_ratio')
     @classmethod

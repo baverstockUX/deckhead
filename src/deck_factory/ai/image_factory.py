@@ -14,9 +14,46 @@ from .gemini_client import GeminiClient
 from ..core.models import (
     ImageGenerationRequest,
     GeneratedImage,
-    BrandAssets
+    BrandAssets,
+    TextContent
 )
 from ..core.exceptions import GenerationFailedError
+
+
+# Layout instruction templates for prompt engineering
+LAYOUT_INSTRUCTIONS = {
+    "split-left": (
+        "Create a split-screen composition with 16:9 aspect ratio. "
+        "LEFT HALF: Visual content (image, illustration, or graphic). "
+        "RIGHT HALF: Text content area with clean background. "
+        "Maintain clear vertical division."
+    ),
+    "split-right": (
+        "Create a split-screen composition with 16:9 aspect ratio. "
+        "LEFT HALF: Text content area with clean background. "
+        "RIGHT HALF: Visual content (image, illustration, or graphic). "
+        "Maintain clear vertical division."
+    ),
+    "panel": (
+        "Create a vertical composition with 16:9 aspect ratio. "
+        "TOP TWO-THIRDS: Visual content (image, illustration, or graphic). "
+        "BOTTOM THIRD: Text panel with distinct background. "
+        "Clear horizontal separation between sections."
+    ),
+    "overlay": (
+        "Create a full-frame visual composition with 16:9 aspect ratio. "
+        "BACKGROUND: Complete visual (image or illustration). "
+        "FOREGROUND: Minimal text overlaid at bottom with semi-transparent dark background behind text for readability."
+    ),
+    "image-only": ""  # No layout instruction needed
+}
+
+# Typography specifications for text rendering
+TYPOGRAPHY_SPECS = (
+    "Typography: Clean modern sans-serif fonts, clear visual hierarchy (large bold titles, readable body text), "
+    "high contrast (dark text on light background or vice versa), generous whitespace, proper alignment and spacing. "
+    "Professional business presentation aesthetic."
+)
 
 
 class ImageFactory:
@@ -130,11 +167,13 @@ class ImageFactory:
             start_time = time.time()
 
             try:
-                # Enhance prompt with brand style if provided
+                # Enhance prompt with layout, text content, and brand style
                 enhanced_prompt = self._build_image_prompt(
                     request.prompt,
                     reference_image_data,
-                    infographic_style=getattr(request, 'infographic_style', False)
+                    infographic_style=getattr(request, 'infographic_style', False),
+                    layout_type=getattr(request, 'layout_type', None),
+                    text_content=getattr(request, 'text_content', None)
                 )
 
                 # Generate image
@@ -170,43 +209,120 @@ class ImageFactory:
         self,
         base_prompt: str,
         reference_image_data: Optional[List[bytes]],
-        infographic_style: bool = False
+        infographic_style: bool = False,
+        layout_type: Optional[str] = None,
+        text_content: Optional[TextContent] = None
     ) -> str:
         """
-        Enhance image prompt with style context.
+        Enhance image prompt with layout, text content, and style context.
 
         Args:
-            base_prompt: Base image generation prompt
+            base_prompt: Base image generation prompt (visual description)
             reference_image_data: Brand reference images (if available)
             infographic_style: Whether to generate infographic-style image
+            layout_type: Layout type for positioning instructions
+            text_content: Structured text content to bake into image
 
         Returns:
-            Enhanced prompt string
+            Enhanced prompt string with all instructions
         """
-        # Add infographic style prefix if needed
+        prompt_parts = []
+
+        # 1. Layout instructions (positioning)
+        layout_instruction = self._get_layout_instructions(layout_type)
+        if layout_instruction:
+            prompt_parts.append(layout_instruction)
+
+        # 2. Text content instructions (what text to render)
+        if text_content:
+            text_instruction = self._convert_text_content_to_prompt(text_content)
+            if text_instruction:
+                prompt_parts.append(text_instruction)
+
+        # 3. Typography specifications (if text content exists)
+        if text_content:
+            prompt_parts.append(TYPOGRAPHY_SPECS)
+
+        # 4. Infographic style prefix (existing logic)
         if infographic_style:
             infographic_instruction = (
                 "Create an infographic-style data visualization: clean charts, graphs, or diagrams "
                 "with clear labels, modern color palette, minimal text, professional business style. "
             )
-            enhanced_prompt = infographic_instruction + base_prompt
-        else:
-            enhanced_prompt = base_prompt
+            prompt_parts.append(infographic_instruction)
 
-        # If brand references provided, add style consistency instruction
+        # 5. Base visual prompt (existing)
+        prompt_parts.append(base_prompt)
+
+        # 6. Brand style instruction (existing logic)
         if reference_image_data:
             style_instruction = (
                 "Match the visual style, color palette, and aesthetic of the provided reference images. "
-                "Maintain brand consistency while incorporating the following concept: "
+                "Maintain brand consistency throughout the composition."
             )
-            return style_instruction + enhanced_prompt
+            prompt_parts.append(style_instruction)
+        else:
+            # General quality instructions (existing)
+            quality_prefix = (
+                "Professional quality, photorealistic or illustrated style, "
+                "clean composition, 16:9 aspect ratio, suitable for business presentation."
+            )
+            prompt_parts.append(quality_prefix)
 
-        # Otherwise, add general quality instructions
-        quality_prefix = (
-            "Professional quality, photorealistic or illustrated style, "
-            "clean composition, 16:9 aspect ratio, suitable for business presentation. "
-        )
-        return quality_prefix + enhanced_prompt
+        # Combine all parts
+        return " ".join(prompt_parts)
+
+    def _convert_text_content_to_prompt(self, content: TextContent) -> str:
+        """
+        Convert structured TextContent into natural language prompt instructions.
+
+        Args:
+            content: Structured text content (bullets, statistics, paragraphs, callouts)
+
+        Returns:
+            Natural language text rendering instructions for image generation
+        """
+        instructions = []
+
+        # Bullets
+        if content.bullets:
+            bullet_text = " • ".join(content.bullets)
+            instructions.append(f"Include bullet points: {bullet_text}")
+
+        # Statistics (prominently displayed)
+        if content.statistics:
+            stats_text = ", ".join([f"{s['label']}: {s['value']}" for s in content.statistics])
+            instructions.append(f"Display statistics prominently with visual emphasis: {stats_text}")
+
+        # Paragraphs
+        if content.paragraphs:
+            for para in content.paragraphs:
+                instructions.append(f"Include text: {para}")
+
+        # Callouts (visually distinct)
+        if content.callouts:
+            for callout in content.callouts:
+                instructions.append(
+                    f"Include highlighted callout box - Title: '{callout['title']}', "
+                    f"Content: '{callout['text']}'"
+                )
+
+        return " ".join(instructions)
+
+    def _get_layout_instructions(self, layout_type: Optional[str]) -> str:
+        """
+        Get layout positioning instructions for the given layout type.
+
+        Args:
+            layout_type: Layout type identifier
+
+        Returns:
+            Layout instruction string for prompt
+        """
+        if not layout_type:
+            return ""
+
+        return LAYOUT_INSTRUCTIONS.get(layout_type, "")
 
     async def generate_single_with_retry(
         self,

@@ -265,6 +265,8 @@ Return a JSON response with this EXACT structure:
 
 IMPORTANT:
 - Image prompts must include the slide title visually integrated into the image
+- Text content will be BAKED INTO THE GENERATED IMAGE (not PowerPoint text)
+- Layout types control how text is positioned within the generated image
 - Only include text_content if substantial content exists (not just rephrasing the title)
 - Default to "image-only" layout when in doubt
 - For statistics/data slides, use infographic_style: true to generate chart-like images
@@ -348,6 +350,7 @@ IMPORTANT:
 - Incorporate ALL user feedback
 - Maintain slide numbering sequence
 - Ensure slide titles are incorporated into image prompts
+- Text content will be RENDERED IN THE GENERATED IMAGE, not as PowerPoint text
 - Ensure appropriate layout_type for each slide's content
 - Include text_content only when substantial content exists
 - Use infographic_style: true for data-heavy slides

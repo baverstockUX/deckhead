@@ -117,7 +117,9 @@ async def main():
                 slide_number=slide.slide_number,
                 prompt=slide.image_prompt,
                 aspect_ratio="16:9",
-                infographic_style=getattr(slide, 'infographic_style', False)
+                infographic_style=getattr(slide, 'infographic_style', False),
+                layout_type=slide.layout_type,
+                text_content=slide.text_content
             )
             for slide in deck_structure.slides
         ]
