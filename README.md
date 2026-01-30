@@ -1,5 +1,8 @@
 # Deckhead
 
+<img width="50%" height="50%" alt="image" src="https://github.com/user-attachments/assets/82992f92-ee5f-47f7-b66b-409c268e9960" />
+
+
 AI-powered PowerPoint presentation generator using Google Gemini.
 
 Transform plain text or markdown content into professional presentations with AI-generated images, intelligent text layouts, and interactive clarification questions.
