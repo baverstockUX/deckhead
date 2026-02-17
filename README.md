@@ -4,8 +4,13 @@ AI-powered PowerPoint presentation generator using Google Gemini.
 
 Transform plain text or markdown content into professional presentations with AI-generated images, intelligent text layouts, and interactive clarification questions.
 
+**Available Interfaces:**
+- **Web UI**: Modern web interface with drag-and-drop, real-time progress, and live WebSocket updates
+- **CLI**: Interactive terminal interface with rich formatting and progress tracking
+
 ## Features
 
+### Core Features
 - **Text Content Modes**: Choose between minimal (titles only) or rich (full content) text modes
 - **Smart Content Parsing**: Gemini Flash analyzes your content and structures it into logical slides
 - **AI Image Generation**: Gemini Imagen generates professional images for each slide with integrated titles
@@ -15,17 +20,37 @@ Transform plain text or markdown content into professional presentations with AI
 - **Brand Consistency**: Pass reference images to maintain visual style across all slides
 - **Interactive Clarification**: AI asks questions to refine the presentation
 - **Parallel Processing**: Async image generation for fast performance
-- **Beautiful CLI**: Rich terminal interface with progress tracking
+
+### Interface Options
+- **Modern Web UI**:
+  - Drag-and-drop file upload
+  - Real-time WebSocket progress updates
+  - 8-step wizard workflow
+  - Smooth animations and professional design
+  - Live generation tracking with percentage and status
+- **Rich CLI**:
+  - Interactive terminal interface
+  - Progress bars and spinners
+  - File path autocomplete
+  - Color-coded output
 
 ## Quick Start
 
-### 1. Install Dependencies
+### Option A: Web UI (Recommended)
+
+#### 1. Install Dependencies
 
 ```bash
+# Install Python dependencies
 pip install -r requirements.txt
+
+# Install Node.js dependencies
+cd web-ui
+npm install
+cd ..
 ```
 
-### 2. Set Up API Key
+#### 2. Set Up API Key
 
 Create a `.env` file in the project root with your Gemini API key:
 ```bash
@@ -34,7 +59,46 @@ gemini_key='your-api-key-here'
 
 Get your API key from: https://makersuite.google.com/app/apikey
 
-### 3. Create Your Content
+#### 3. Start the Backend
+
+```bash
+python -m uvicorn src.web.app:app --reload --port 8000
+```
+
+#### 4. Start the Frontend
+
+In a separate terminal:
+```bash
+cd web-ui
+npm run dev
+```
+
+#### 5. Open in Browser
+
+Navigate to `http://localhost:5173` and enjoy the modern web interface with:
+- Drag-and-drop file upload
+- Real-time WebSocket progress updates
+- Interactive wizard workflow
+- Live generation tracking
+
+### Option B: CLI
+
+#### 1. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+#### 2. Set Up API Key
+
+Create a `.env` file in the project root with your Gemini API key:
+```bash
+gemini_key='your-api-key-here'
+```
+
+Get your API key from: https://makersuite.google.com/app/apikey
+
+#### 3. Create Your Content
 
 Create a markdown or text file in the `content/` directory:
 
@@ -51,7 +115,7 @@ Key points and details...
 Wrap up your presentation...
 ```
 
-### 4. Run Deckhead
+#### 4. Run Deckhead
 
 ```bash
 python -m src.deck_factory
@@ -99,6 +163,27 @@ Text content can include:
 
 In minimal mode, all slides use **image-only** layout with no text content.
 
+## Web UI Workflow
+
+The web interface provides an 8-step wizard experience:
+
+1. **Welcome** - Introduction and session creation
+2. **Mode Selection** - Choose minimal or rich text content mode
+3. **Content Upload** - Drag & drop your markdown/text file
+4. **Brand Assets** - Optional: Upload reference images for visual consistency
+5. **AI Parsing** - Automatic content analysis with loading state
+6. **Clarifications** - Answer dynamic AI-generated questions
+7. **Structure Preview** - Review and confirm presentation structure
+8. **Generation** - Real-time progress via WebSocket with percentage updates
+
+**Key Features:**
+- **Live Progress**: WebSocket connection provides real-time updates during image generation
+- **Drag & Drop**: Easy file upload with validation and visual feedback
+- **Responsive Design**: Glassmorphic cards, smooth animations, gradient accents
+- **Download Ready**: One-click PowerPoint download when complete
+
+**Tech Stack:** React 18, TypeScript, Tailwind CSS, Framer Motion, Vite, Axios, WebSocket
+
 ## Brand Assets
 
 To maintain visual consistency, provide reference images:
@@ -117,8 +202,8 @@ pow/
 ├── requirements.txt              # Python dependencies
 ├── README.md                     # This file
 │
-├── src/deck_factory/
-│   ├── __main__.py               # Entry point
+├── src/deck_factory/             # Core presentation engine
+│   ├── __main__.py               # CLI entry point
 │   ├── core/                     # Core functionality
 │   │   ├── config.py             # Configuration loader
 │   │   ├── models.py             # Data models (5 layout types)
@@ -130,8 +215,32 @@ pow/
 │   │   └── image_factory.py      # Image generation (infographic support)
 │   ├── deck/                     # PowerPoint assembly
 │   │   └── assembler.py          # PPTX creation (5 layout types)
-│   └── cli/                      # User interface
+│   └── cli/                      # CLI user interface
 │       └── interactive.py        # Interactive CLI
+│
+├── src/web/                      # Web API backend (FastAPI)
+│   ├── app.py                    # FastAPI application
+│   ├── api/                      # API routes
+│   │   ├── routes/               # HTTP endpoints (session, files, generation)
+│   │   └── websockets/           # WebSocket handlers (real-time progress)
+│   ├── services/                 # Business logic
+│   │   ├── session_manager.py    # Session management
+│   │   └── workflow_service.py   # Presentation workflow
+│   └── schemas/                  # Pydantic schemas
+│
+├── web-ui/                       # Web frontend (React + TypeScript)
+│   ├── src/
+│   │   ├── components/           # React components
+│   │   │   ├── wizard/           # 8-step wizard
+│   │   │   ├── ui/               # Reusable UI components
+│   │   │   └── shared/           # Shared components (FileUpload)
+│   │   ├── hooks/                # React hooks (useWizardState, useWebSocket)
+│   │   ├── services/             # API client (Axios)
+│   │   ├── types/                # TypeScript definitions
+│   │   └── App.tsx               # Main app component
+│   ├── package.json              # Node.js dependencies
+│   ├── vite.config.ts            # Vite configuration
+│   └── tailwind.config.js        # Tailwind CSS configuration
 │
 ├── content/                      # Your content files (gitignored)
 │   └── my_presentation.md
@@ -145,6 +254,8 @@ pow/
 
 ## Configuration
 
+### Environment Variables
+
 Optional environment variables (in `.env`):
 
 ```bash
@@ -156,6 +267,19 @@ MAX_CONCURRENT_IMAGES=5       # Concurrent image generations (default: 5)
 TEMP_DIR=./temp_assets        # Temporary file directory (default: ./temp_assets)
 OUTPUT_DIR=./src/output       # Output directory for presentations (default: ./src/output)
 ```
+
+### Dependencies
+
+**Python (Backend & CLI)**
+- Core: google-generativeai, python-pptx, pydantic, rich
+- Web API: fastapi, uvicorn, websockets, python-multipart
+- Utilities: python-dotenv, aiofiles, tenacity
+
+**Node.js (Web UI)**
+- Framework: React 18, TypeScript, Vite
+- Styling: Tailwind CSS, Framer Motion
+- Client: Axios, WebSocket
+- See `web-ui/package.json` for full list
 
 ## API Models Used
 
@@ -210,56 +334,158 @@ The AI will:
 
 ## Troubleshooting
 
-### "Missing API Key" Error
+### General Issues
+
+#### "Missing API Key" Error
 - Check that `.env` file exists in project root
 - Verify API key is set: `gemini_key='your-key'`
 
-### Image Generation Fails
+#### Image Generation Fails
 - Check API quota at https://console.cloud.google.com/
 - Reduce concurrent requests: `MAX_CONCURRENT_IMAGES=3` in `.env`
 - Verify reference images are in supported formats (jpg, png, webp)
 
-### "Module not found" Error
+#### "Module not found" Error
 - Install dependencies: `pip install -r requirements.txt`
 - Run from project root: `python -m src.deck_factory`
 
-### Content Not Displaying on Slides
+#### Content Not Displaying on Slides
 - Ensure content has substantial text (3+ bullets or meaningful paragraphs)
 - AI defaults to image-only layout when content is minimal
 - Check that content is structured properly (headings, bullets, etc.)
 
+### Web UI Issues
+
+#### Backend Connection Error
+1. Verify backend is running:
+   ```bash
+   curl http://localhost:8000/api/health
+   ```
+   Should return: `{"status": "ok"}`
+2. Check CORS settings in `src/web/app.py`
+3. Ensure ports 8000 (backend) and 5173 (frontend) are not blocked
+
+#### WebSocket Not Connecting
+- Check browser console for WebSocket errors
+- Verify backend WebSocket endpoint is accessible
+- Check firewall/proxy settings
+- Try Chrome/Firefox DevTools → Network → WS tab
+
+#### Port Already in Use
+```bash
+# Kill process on port 5173 (frontend)
+lsof -ti:5173 | xargs kill -9
+
+# Kill process on port 8000 (backend)
+lsof -ti:8000 | xargs kill -9
+```
+
+#### Styles Not Loading (Web UI)
+```bash
+cd web-ui
+rm -rf node_modules package-lock.json
+npm install
+npm run dev
+```
+
 ## Development
 
 ### Running Tests
+
+**Python/Backend:**
 ```bash
+# Run full test suite
 pytest tests/
+
+# Run specific test
+python3 tests/test_e2e.py
+```
+
+**Web UI:**
+```bash
+cd web-ui
+
+# Type checking
+npm run tsc
+
+# Linting
+npm run lint
 ```
 
 ### Code Formatting
+
+**Python:**
 ```bash
 black src/
 ```
 
+**Web UI:**
+```bash
+cd web-ui
+npm run format  # If configured
+```
+
 ### Type Checking
+
+**Python:**
 ```bash
 mypy src/
+```
+
+**TypeScript:**
+```bash
+cd web-ui
+npm run tsc
+```
+
+### Running in Development
+
+**Backend (with hot reload):**
+```bash
+python -m uvicorn src.web.app:app --reload --port 8000
+```
+
+**Frontend (with hot reload):**
+```bash
+cd web-ui
+npm run dev
 ```
 
 ## Architecture
 
 Deckhead uses a modular architecture with AI-driven layout selection:
 
+### Core Engine (Python)
 1. **ConfigLoader**: Manages environment and settings
 2. **GeminiClient**: Unified API wrapper for text and image generation
 3. **ContentParser**: Parses content into structured format with layout decisions
 4. **Clarifier**: Generates and validates clarification questions
 5. **ImageFactory**: Async parallel image generation with infographic support
 6. **DeckAssembler**: Creates PowerPoint with 5 layout types (python-pptx)
-7. **InteractiveCLI**: Rich terminal interface
+
+### User Interfaces
+**CLI Interface:**
+- **InteractiveCLI**: Rich terminal interface with progress tracking
+
+**Web Interface:**
+- **FastAPI Backend**: RESTful API + WebSocket endpoints for real-time updates
+- **Session Manager**: Stateful session management for multi-step workflow
+- **Workflow Service**: Orchestrates presentation generation pipeline
+- **React Frontend**: TypeScript-based SPA with wizard workflow
+- **WebSocket Client**: Real-time progress updates during generation
 
 All components use Pydantic models for type safety and validation.
 
 ## Recent Updates
+
+### v0.4 - Web UI Interface (Feb 2026)
+- ✨ **New Web UI**: Modern React-based interface with 8-step wizard
+- ✨ **Real-time Progress**: WebSocket integration for live generation updates
+- ✨ **Drag & Drop**: File upload with visual feedback
+- ✨ **FastAPI Backend**: RESTful API with async workflow orchestration
+- ✨ **Professional Design**: Glassmorphic UI with smooth animations
+- 🏗️ **Architecture**: Separation of core engine from interface layers
+- 📚 Comprehensive web UI documentation and quickstart guide
 
 ### v0.3 - Text Content Mode Switcher (Jan 2026)
 - ✨ Added text content mode selector (minimal vs rich)
@@ -293,11 +519,28 @@ For issues, questions, or contributions:
 ## Credits
 
 Built with:
+
+**AI & Core:**
 - Google Gemini API (Gemini 3 Flash + Gemini 3 Pro Image)
 - python-pptx (PowerPoint generation)
-- Rich (terminal UI)
 - Pydantic (validation)
 - asyncio (concurrency)
+
+**CLI Interface:**
+- Rich (terminal UI)
+
+**Web Backend:**
+- FastAPI (API framework)
+- Uvicorn (ASGI server)
+- WebSockets (real-time updates)
+
+**Web Frontend:**
+- React 18 (UI framework)
+- TypeScript (type safety)
+- Vite (build tool)
+- Tailwind CSS (styling)
+- Framer Motion (animations)
+- Axios (HTTP client)
 
 ---
 
