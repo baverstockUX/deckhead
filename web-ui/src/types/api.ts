@@ -1,28 +1,23 @@
 import { DeckStructure, ClarificationQuestion, ClarificationResponse } from './models';
 
 // API Request Types
-export interface CreateSessionRequest {}
-
 export interface ParseContentRequest {
-  session_id: string;
   content: string;
   mode: 'minimal' | 'rich';
 }
 
 export interface RefineStructureRequest {
-  session_id: string;
+  deck_structure: DeckStructure;
   clarifications: ClarificationResponse[];
+  mode: 'minimal' | 'rich';
 }
 
 export interface StartGenerationRequest {
-  session_id: string;
+  deck_structure: DeckStructure;
+  brand_asset_file_ids: string[];
 }
 
 // API Response Types
-export interface CreateSessionResponse {
-  session_id: string;
-}
-
 export interface UploadFileResponse {
   file_id: string;
   filename: string;

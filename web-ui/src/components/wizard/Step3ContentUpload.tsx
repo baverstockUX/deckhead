@@ -18,16 +18,14 @@ export function Step3ContentUpload() {
     setError(null);
 
     // Upload file to backend
-    if (state.sessionId) {
-      try {
-        setIsUploading(true);
-        await apiClient.uploadContentFile(state.sessionId, file);
-        setIsUploading(false);
-      } catch (err) {
-        setError('Failed to upload file. Please try again.');
-        setIsUploading(false);
-        console.error('Upload error:', err);
-      }
+    try {
+      setIsUploading(true);
+      await apiClient.uploadContentFile(file);
+      setIsUploading(false);
+    } catch (err) {
+      setError('Failed to upload file. Please try again.');
+      setIsUploading(false);
+      console.error('Upload error:', err);
     }
   };
 

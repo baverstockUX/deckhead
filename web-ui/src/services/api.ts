@@ -1,6 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
 import type {
-  CreateSessionResponse,
   UploadFileResponse,
   ParseContentResponse,
   ParseContentRequest,
@@ -20,30 +19,14 @@ class APIClient {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 120000, // 2 minutes for long operations
+      timeout: 120000,
     });
   }
 
-  // Session Management
-  async createSession(): Promise<CreateSessionResponse> {
-    const response = await this.client.post<CreateSessionResponse>('/api/session/create');
-    return response.data;
-  }
-
-  async getSession(sessionId: string) {
-    const response = await this.client.get(`/api/session/${sessionId}`);
-    return response.data;
-  }
-
-  async deleteSession(sessionId: string): Promise<void> {
-    await this.client.delete(`/api/session/${sessionId}`);
-  }
-
   // File Upload
-  async uploadContentFile(sessionId: string, file: File): Promise<UploadFileResponse> {
+  async uploadContentFile(file: File): Promise<UploadFileResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('session_id', sessionId);
 
     const response = await this.client.post<UploadFileResponse>(
       '/api/files/content',
@@ -57,12 +40,11 @@ class APIClient {
     return response.data;
   }
 
-  async uploadBrandAssets(sessionId: string, files: File[]): Promise<UploadFileResponse[]> {
+  async uploadBrandAssets(files: File[]): Promise<UploadFileResponse[]> {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append('files', file);
     });
-    formData.append('session_id', sessionId);
 
     const response = await this.client.post<UploadFileResponse[]>(
       '/api/files/brand-assets',

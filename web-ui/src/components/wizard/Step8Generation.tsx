@@ -37,21 +37,23 @@ export function Step8Generation() {
     }
   };
 
-  const { isConnected, error: wsError } = useWebSocket(state.sessionId, {
+  // Use jobId for WebSocket connection (progress keyed by job_id on backend)
+  const { isConnected, error: wsError } = useWebSocket(state.jobId, {
     onMessage: handleWebSocketMessage,
   });
 
   useEffect(() => {
     const startGeneration = async () => {
-      if (!state.sessionId) {
-        setError('Session not found');
+      if (!state.deckStructure) {
+        setError('Missing deck structure');
         return;
       }
 
       try {
         setStatus('Starting generation...');
         const response = await apiClient.startGeneration({
-          session_id: state.sessionId,
+          deck_structure: state.deckStructure,
+          brand_asset_file_ids: [],
         });
 
         setJobId(response.job_id);
@@ -63,7 +65,7 @@ export function Step8Generation() {
     };
 
     startGeneration();
-  }, [state.sessionId, setJobId]);
+  }, [state.deckStructure, setJobId]);
 
   const handleDownload = async () => {
     if (!state.jobId) return;

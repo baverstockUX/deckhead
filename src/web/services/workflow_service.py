@@ -7,6 +7,7 @@ Wraps existing deck_factory business logic for web interface.
 import asyncio
 from typing import Optional, Tuple, List, Callable
 from pathlib import Path
+import glob as glob_mod
 
 from deck_factory.core.config import ConfigLoader
 from deck_factory.core.models import (
@@ -21,7 +22,9 @@ from deck_factory.ai.content_parser import ContentParser
 from deck_factory.ai.clarifier import Clarifier
 from deck_factory.ai.image_factory import ImageFactory
 from deck_factory.deck.assembler import DeckAssembler
-from web.services.session_manager import session_manager
+
+# Upload directory (must match files.py)
+UPLOAD_DIR = Path.cwd() / 'temp_assets'
 
 
 class WorkflowService:
@@ -57,111 +60,55 @@ class WorkflowService:
 
     async def parse_content(
         self,
-        session_id: str,
         content: str,
         mode: str
     ) -> Tuple[DeckStructure, List[ClarificationQuestion]]:
-        """
-        Parse content with AI.
-
-        Args:
-            session_id: Session ID
-            content: Content text
-            mode: Text mode ('minimal' or 'rich')
-
-        Returns:
-            Tuple of (DeckStructure, list of ClarificationQuestions)
-        """
-        # Initialize parser
+        """Parse content with AI."""
         content_parser = ContentParser(self.gemini_client, mode=mode)
-
-        # Parse content
         deck_structure, clarification_questions = await content_parser.parse_content(content)
-
-        # Store in session
-        session_manager.update_session(session_id, {
-            'deck_structure': deck_structure.model_dump(),
-            'clarification_questions': [q.model_dump() for q in clarification_questions],
-        })
-
         return deck_structure, clarification_questions
 
     async def refine_structure(
         self,
-        session_id: str,
-        clarifications: List[ClarificationResponse]
+        deck_structure_data: dict,
+        clarifications: List[ClarificationResponse],
+        mode: str
     ) -> DeckStructure:
-        """
-        Refine deck structure based on clarifications.
-
-        Args:
-            session_id: Session ID
-            clarifications: User responses to clarification questions
-
-        Returns:
-            Refined DeckStructure
-        """
-        session = session_manager.get_session(session_id)
-        if not session:
-            raise ValueError('Session not found')
-
-        # Get stored deck structure
-        deck_structure = DeckStructure(**session['deck_structure'])
-
-        # Initialize parser
-        mode = session.get('mode', 'minimal')
+        """Refine deck structure based on clarifications."""
+        deck_structure = DeckStructure(**deck_structure_data)
         content_parser = ContentParser(self.gemini_client, mode=mode)
-
-        # Refine structure
         refined_structure = await content_parser.refine_structure(
             deck_structure,
             clarifications
         )
-
-        # Update session
-        session_manager.update_session(session_id, {
-            'deck_structure': refined_structure.model_dump(),
-            'clarification_responses': [c.model_dump() for c in clarifications],
-        })
-
         return refined_structure
 
     async def generate_deck(
         self,
-        session_id: str,
+        deck_structure_data: dict,
+        brand_asset_file_ids: List[str],
         progress_callback: Optional[Callable[[int, int], None]] = None
     ) -> Path:
-        """
-        Generate complete deck with images and assembly.
+        """Generate complete deck with images and assembly."""
+        deck_structure = DeckStructure(**deck_structure_data)
 
-        Args:
-            session_id: Session ID
-            progress_callback: Optional callback for progress updates (current, total)
+        # Resolve brand asset paths from file IDs
+        brand_asset_paths = []
+        for file_id in brand_asset_file_ids:
+            matches = list(UPLOAD_DIR.glob(f"{file_id}_*"))
+            if matches:
+                brand_asset_paths.append(matches[0])
 
-        Returns:
-            Path to generated presentation
-        """
-        session = session_manager.get_session(session_id)
-        if not session:
-            raise ValueError('Session not found')
-
-        # Get deck structure
-        deck_structure = DeckStructure(**session['deck_structure'])
-
-        # Get brand assets
-        brand_asset_paths = session.get('files', {}).get('brand_asset_paths', [])
         brand_assets = BrandAssets(
-            reference_images=[Path(p) for p in brand_asset_paths]
+            reference_images=brand_asset_paths
         )
 
-        # Initialize components
         image_factory = ImageFactory(
             self.gemini_client,
             self.config.max_concurrent_images
         )
         deck_assembler = DeckAssembler()
 
-        # Create image generation requests
         image_requests = [
             ImageGenerationRequest(
                 slide_number=slide.slide_number,
@@ -174,14 +121,12 @@ class WorkflowService:
             for slide in deck_structure.slides
         ]
 
-        # Generate images
         images = await image_factory.generate_images(
             image_requests,
             brand_assets,
             progress_callback=progress_callback
         )
 
-        # Assemble presentation
         output_filename = deck_structure.deck_title.replace(' ', '_') + '.pptx'
         output_path = self.config.output_dir / output_filename
 
@@ -190,11 +135,6 @@ class WorkflowService:
             images,
             output_path
         )
-
-        # Update session
-        session_manager.update_session(session_id, {
-            'output_path': str(final_path)
-        })
 
         return final_path
 

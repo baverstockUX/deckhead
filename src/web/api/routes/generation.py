@@ -1,7 +1,8 @@
 """Generation workflow routes."""
 
 import asyncio
-from typing import List
+import uuid
+from typing import List, Dict, Optional
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -10,15 +11,16 @@ from pydantic import BaseModel
 
 from deck_factory.core.models import ClarificationResponse
 from web.services.workflow_service import workflow_service
-from web.services.session_manager import session_manager
 from web.api.websockets.progress import progress_manager
 
 router = APIRouter(prefix='/api/generation', tags=['generation'])
 
+# Track job outputs (job_id -> output_path) for download
+_job_outputs: Dict[str, str] = {}
+
 
 class ParseContentRequest(BaseModel):
     """Parse content request."""
-    session_id: str
     content: str
     mode: str
 
@@ -31,8 +33,9 @@ class ParseContentResponse(BaseModel):
 
 class RefineStructureRequest(BaseModel):
     """Refine structure request."""
-    session_id: str
+    deck_structure: dict
     clarifications: List[dict]
+    mode: str = 'minimal'
 
 
 class RefineStructureResponse(BaseModel):
@@ -42,7 +45,8 @@ class RefineStructureResponse(BaseModel):
 
 class StartGenerationRequest(BaseModel):
     """Start generation request."""
-    session_id: str
+    deck_structure: dict
+    brand_asset_file_ids: List[str] = []
 
 
 class StartGenerationResponse(BaseModel):
@@ -53,18 +57,9 @@ class StartGenerationResponse(BaseModel):
 
 @router.post('/parse', response_model=ParseContentResponse)
 async def parse_content(request: ParseContentRequest):
-    """
-    Parse content with AI.
-
-    Args:
-        request: Parse content request
-
-    Returns:
-        Deck structure and clarification questions
-    """
+    """Parse content with AI."""
     try:
         deck_structure, questions = await workflow_service.parse_content(
-            request.session_id,
             request.content,
             request.mode
         )
@@ -79,24 +74,16 @@ async def parse_content(request: ParseContentRequest):
 
 @router.post('/refine', response_model=RefineStructureResponse)
 async def refine_structure(request: RefineStructureRequest):
-    """
-    Refine deck structure based on clarifications.
-
-    Args:
-        request: Refine structure request
-
-    Returns:
-        Refined deck structure
-    """
+    """Refine deck structure based on clarifications."""
     try:
-        # Convert dict clarifications to ClarificationResponse objects
         clarifications = [
             ClarificationResponse(**c) for c in request.clarifications
         ]
 
         refined_structure = await workflow_service.refine_structure(
-            request.session_id,
-            clarifications
+            request.deck_structure,
+            clarifications,
+            request.mode
         )
 
         return RefineStructureResponse(
@@ -106,17 +93,10 @@ async def refine_structure(request: RefineStructureRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-async def generate_deck_task(session_id: str, job_id: str):
-    """
-    Background task for deck generation.
-
-    Args:
-        session_id: Session ID
-        job_id: Job ID
-    """
+async def generate_deck_task(job_id: str, deck_structure_data: dict, brand_asset_file_ids: List[str]):
+    """Background task for deck generation."""
     try:
-        # Send start event
-        await progress_manager.send(session_id, {
+        await progress_manager.send(job_id, {
             'type': 'progress',
             'event': 'image_generation_started',
             'data': {
@@ -124,10 +104,9 @@ async def generate_deck_task(session_id: str, job_id: str):
             }
         })
 
-        # Progress callback
         async def progress_callback(slide_num: int, total: int):
             percentage = int((slide_num / total) * 100)
-            await progress_manager.send(session_id, {
+            await progress_manager.send(job_id, {
                 'type': 'progress',
                 'event': 'image_generated',
                 'data': {
@@ -139,14 +118,16 @@ async def generate_deck_task(session_id: str, job_id: str):
                 }
             })
 
-        # Generate deck
         output_path = await workflow_service.generate_deck(
-            session_id,
+            deck_structure_data,
+            brand_asset_file_ids,
             progress_callback=lambda s, t: asyncio.create_task(progress_callback(s, t))
         )
 
-        # Send completion event
-        await progress_manager.send(session_id, {
+        # Store output path for download
+        _job_outputs[job_id] = str(output_path)
+
+        await progress_manager.send(job_id, {
             'type': 'progress',
             'event': 'assembly_completed',
             'data': {
@@ -156,8 +137,7 @@ async def generate_deck_task(session_id: str, job_id: str):
         })
 
     except Exception as e:
-        # Send error event
-        await progress_manager.send(session_id, {
+        await progress_manager.send(job_id, {
             'type': 'progress',
             'event': 'error',
             'data': {
@@ -171,29 +151,15 @@ async def start_generation(
     request: StartGenerationRequest,
     background_tasks: BackgroundTasks
 ):
-    """
-    Start deck generation (async).
-
-    Args:
-        request: Start generation request
-        background_tasks: FastAPI background tasks
-
-    Returns:
-        Job ID and status message
-    """
-    session = session_manager.get_session(request.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail='Session not found')
-
-    # Create job ID
-    import uuid
+    """Start deck generation (async)."""
     job_id = str(uuid.uuid4())
 
-    # Update session
-    session_manager.update_session(request.session_id, {'job_id': job_id})
-
-    # Start background task
-    background_tasks.add_task(generate_deck_task, request.session_id, job_id)
+    background_tasks.add_task(
+        generate_deck_task,
+        job_id,
+        request.deck_structure,
+        request.brand_asset_file_ids
+    )
 
     return StartGenerationResponse(
         job_id=job_id,
@@ -203,26 +169,12 @@ async def start_generation(
 
 @router.get('/download/{job_id}')
 async def download_presentation(job_id: str):
-    """
-    Download generated presentation.
-
-    Args:
-        job_id: Job ID
-
-    Returns:
-        PPTX file
-    """
-    # Find session with this job_id
-    session = None
-    for sid, sess in session_manager._sessions.items():
-        if sess.get('job_id') == job_id:
-            session = sess
-            break
-
-    if not session or not session.get('output_path'):
+    """Download generated presentation."""
+    output_path_str = _job_outputs.get(job_id)
+    if not output_path_str:
         raise HTTPException(status_code=404, detail='Presentation not found')
 
-    output_path = Path(session['output_path'])
+    output_path = Path(output_path_str)
     if not output_path.exists():
         raise HTTPException(status_code=404, detail='File not found')
 

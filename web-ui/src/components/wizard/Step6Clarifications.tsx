@@ -28,8 +28,8 @@ export function Step6Clarifications() {
   };
 
   const handleSubmit = async () => {
-    if (!state.sessionId) {
-      setError('Session not found');
+    if (!state.deckStructure) {
+      setError('Missing deck structure');
       return;
     }
 
@@ -38,8 +38,9 @@ export function Step6Clarifications() {
       setError(null);
 
       const response = await apiClient.refineStructure({
-        session_id: state.sessionId,
+        deck_structure: state.deckStructure,
         clarifications: state.clarificationResponses,
+        mode: state.mode || 'minimal',
       });
 
       setDeckStructure(response.deck_structure);

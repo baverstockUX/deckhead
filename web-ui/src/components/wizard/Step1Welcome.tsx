@@ -1,22 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Zap, Image as ImageIcon } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWizard } from '@/hooks/useWizardState';
-import { apiClient } from '@/services/api';
 
 export function Step1Welcome() {
-  const { nextStep, setSessionId } = useWizard();
-
-  useEffect(() => {
-    // Create session when component mounts
-    apiClient.createSession().then((response) => {
-      setSessionId(response.session_id);
-    }).catch((error) => {
-      console.error('Failed to create session:', error);
-    });
-  }, [setSessionId]);
+  const { nextStep } = useWizard();
 
   const features = [
     {

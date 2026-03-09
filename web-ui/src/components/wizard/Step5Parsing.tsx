@@ -12,7 +12,7 @@ export function Step5Parsing() {
 
   useEffect(() => {
     const parseContent = async () => {
-      if (!state.sessionId || !state.contentFile || !state.mode) {
+      if (!state.contentFile || !state.mode) {
         setError('Missing required data');
         return;
       }
@@ -27,7 +27,6 @@ export function Step5Parsing() {
 
         // Parse content
         const response = await apiClient.parseContent({
-          session_id: state.sessionId,
           content,
           mode: state.mode,
         });
@@ -50,7 +49,7 @@ export function Step5Parsing() {
     };
 
     parseContent();
-  }, [state.sessionId, state.contentFile, state.mode, setDeckStructure, setClarificationQuestions, nextStep]);
+  }, [state.contentFile, state.mode, setDeckStructure, setClarificationQuestions, nextStep]);
 
   return (
     <Card variant="glass" className="text-center mx-auto">

@@ -18,16 +18,14 @@ export function Step4BrandAssets() {
     setError(null);
 
     // Upload files to backend
-    if (state.sessionId) {
-      try {
-        setIsUploading(true);
-        await apiClient.uploadBrandAssets(state.sessionId, files);
-        setIsUploading(false);
-      } catch (err) {
-        setError('Failed to upload brand assets. Please try again.');
-        setIsUploading(false);
-        console.error('Upload error:', err);
-      }
+    try {
+      setIsUploading(true);
+      await apiClient.uploadBrandAssets(files);
+      setIsUploading(false);
+    } catch (err) {
+      setError('Failed to upload brand assets. Please try again.');
+      setIsUploading(false);
+      console.error('Upload error:', err);
     }
   };
 
