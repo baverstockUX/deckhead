@@ -32,12 +32,28 @@ class WorkflowService:
     """
 
     def __init__(self):
-        """Initialize workflow service."""
-        self.config = ConfigLoader.from_env()
-        self.gemini_client = GeminiClient(
-            api_key=self.config.gemini_api_key,
-            max_concurrent=self.config.max_concurrent_images
-        )
+        """Initialize workflow service (lazy - defers config loading)."""
+        self._config = None
+        self._gemini_client = None
+
+    def _ensure_initialized(self):
+        """Load config and create client on first use."""
+        if self._config is None:
+            self._config = ConfigLoader.from_env()
+            self._gemini_client = GeminiClient(
+                api_key=self._config.gemini_api_key,
+                max_concurrent=self._config.max_concurrent_images
+            )
+
+    @property
+    def config(self):
+        self._ensure_initialized()
+        return self._config
+
+    @property
+    def gemini_client(self):
+        self._ensure_initialized()
+        return self._gemini_client
 
     async def parse_content(
         self,
