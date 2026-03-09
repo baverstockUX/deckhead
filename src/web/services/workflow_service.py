@@ -8,20 +8,20 @@ import asyncio
 from typing import Optional, Tuple, List, Callable
 from pathlib import Path
 
-from ...deck_factory.core.config import ConfigLoader
-from ...deck_factory.core.models import (
+from deck_factory.core.config import ConfigLoader
+from deck_factory.core.models import (
     DeckStructure,
     ClarificationQuestion,
     ClarificationResponse,
     ImageGenerationRequest,
     BrandAssets,
 )
-from ...deck_factory.ai.gemini_client import GeminiClient
-from ...deck_factory.ai.content_parser import ContentParser
-from ...deck_factory.ai.clarifier import Clarifier
-from ...deck_factory.ai.image_factory import ImageFactory
-from ...deck_factory.deck.assembler import DeckAssembler
-from .session_manager import session_manager
+from deck_factory.ai.gemini_client import GeminiClient
+from deck_factory.ai.content_parser import ContentParser
+from deck_factory.ai.clarifier import Clarifier
+from deck_factory.ai.image_factory import ImageFactory
+from deck_factory.deck.assembler import DeckAssembler
+from web.services.session_manager import session_manager
 
 
 class WorkflowService:

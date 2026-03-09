@@ -8,7 +8,7 @@ import aiofiles
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
 
-from ...services.session_manager import session_manager
+from web.services.session_manager import session_manager
 
 router = APIRouter(prefix='/api/files', tags=['files'])
 

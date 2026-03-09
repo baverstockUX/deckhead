@@ -8,10 +8,10 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from ....deck_factory.core.models import ClarificationResponse
-from ...services.workflow_service import workflow_service
-from ...services.session_manager import session_manager
-from ...api.websockets.progress import progress_manager
+from deck_factory.core.models import ClarificationResponse
+from web.services.workflow_service import workflow_service
+from web.services.session_manager import session_manager
+from web.api.websockets.progress import progress_manager
 
 router = APIRouter(prefix='/api/generation', tags=['generation'])
 

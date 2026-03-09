@@ -4,9 +4,13 @@ FastAPI application for Deckhead web interface.
 Provides REST API and WebSocket endpoints for deck generation workflow.
 """
 
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .api.routes import session, files, generation
 from .api.websockets.progress import websocket_endpoint
@@ -19,14 +23,19 @@ app = FastAPI(
 )
 
 # Configure CORS
+cors_origins = [
+    'http://localhost:5173',  # Vite dev server
+    'http://localhost:3000',  # Alternative port
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+]
+# Allow additional origins from environment
+if os.environ.get('CORS_ORIGINS'):
+    cors_origins.extend(os.environ['CORS_ORIGINS'].split(','))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        'http://localhost:5173',  # Vite dev server
-        'http://localhost:3000',  # Alternative port
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:3000',
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
@@ -52,15 +61,33 @@ async def health_check():
     return {'status': 'ok'}
 
 
-# Root endpoint
+# Serve built frontend
+FRONTEND_DIR = Path(__file__).resolve().parent.parent.parent / 'web-ui' / 'dist'
+
+
 @app.get('/')
 async def root():
-    """Root endpoint."""
-    return {
-        'message': 'Deckhead API',
-        'docs': '/docs',
-        'health': '/api/health'
-    }
+    """Serve frontend index.html or API info."""
+    if FRONTEND_DIR.is_dir():
+        return FileResponse(str(FRONTEND_DIR / 'index.html'))
+    return {'message': 'Deckhead API', 'docs': '/docs', 'health': '/api/health'}
+
+
+# Mount static assets if frontend is built
+if FRONTEND_DIR.is_dir() and (FRONTEND_DIR / 'assets').is_dir():
+    app.mount('/assets', StaticFiles(directory=str(FRONTEND_DIR / 'assets')), name='frontend-assets')
+
+
+# SPA catch-all: serve index.html for any non-API route (must be registered last)
+@app.get('/{path:path}')
+async def serve_frontend(path: str):
+    """Serve frontend static files or index.html for SPA routing."""
+    if FRONTEND_DIR.is_dir():
+        file_path = FRONTEND_DIR / path
+        if file_path.is_file() and file_path.resolve().is_relative_to(FRONTEND_DIR.resolve()):
+            return FileResponse(str(file_path))
+        return FileResponse(str(FRONTEND_DIR / 'index.html'))
+    return JSONResponse(status_code=404, content={'detail': 'Not found'})
 
 
 # Exception handler
